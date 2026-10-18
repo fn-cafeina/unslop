@@ -44,7 +44,7 @@ import sys
 from pathlib import Path
 
 from banned_phrase_scan import (
-    is_probably_english,
+    detect_language,
     scan_for_violations,
 )
 from structure_scan import scan as structure_scan
@@ -63,12 +63,21 @@ def _offset(line_starts: list[int], line_number: int, column: int) -> int:
     return line_starts[line_number - 1] + (column - 1)
 
 
-def _rationale(category: str, span_text: str, suggestion: str | None, is_soft: bool) -> str:
-    """Build a reviewer-facing rationale.
+def _rationale(
+    category: str, span_text: str, suggestion: str | None, is_soft: bool, lang: str = "en"
+) -> str:
+    """Build a reviewer-facing rationale in the document's language.
 
     Soft findings are worded as a question because they are judgment calls whose
     right answer depends on register; hard findings are stated as a direct fix.
     """
+    if lang == "es":
+        if is_soft:
+            hint = f" Considera: {suggestion}." if suggestion else ""
+            return f"Señal leve ({category}): ¿se puede cortar o reformular “{span_text}” aquí?{hint}"
+        if suggestion:
+            return f"Señal de escritura IA ({category}): sustituye “{span_text}” — {suggestion}"
+        return f"Señal de escritura IA ({category}): sustituye “{span_text}”."
     if is_soft:
         hint = f" Consider: {suggestion}." if suggestion else ""
         return f"Soft tell ({category}): could “{span_text}” be cut or reworded here?{hint}"
@@ -77,7 +86,7 @@ def _rationale(category: str, span_text: str, suggestion: str | None, is_soft: b
     return f"AI-writing tell ({category}): replace “{span_text}”."
 
 
-def build_suggestions(text: str) -> list[dict]:
+def build_suggestions(text: str, lang: str = "en") -> list[dict]:
     """Detect AI-isms and turn each into a span-anchored suggestion.
 
     Spans come from banned_phrase_scan (phrases + structural regexes), which are
@@ -85,7 +94,7 @@ def build_suggestions(text: str) -> list[dict]:
     to. macro-structure flags from structure_scan are document-level and are
     surfaced in ``counts`` instead, since they have no single applyable span.
     """
-    violations = scan_for_violations(text)
+    violations = scan_for_violations(text, lang=lang)
     line_starts = _line_starts(text)
     candidates: list[dict] = []
     for v in violations:
@@ -97,7 +106,7 @@ def build_suggestions(text: str) -> list[dict]:
             "span": {"start": start, "end": end, "text": span_text},
             "severity": v["severity"],
             "category": v["category"],
-            "rationale": _rationale(v["category"], span_text, v.get("suggestion"), is_soft),
+            "rationale": _rationale(v["category"], span_text, v.get("suggestion"), is_soft, lang),
             "suggested_replacement": None,
             "phrased_as_question": is_soft,
         })
@@ -185,18 +194,23 @@ def main(argv: list[str]) -> int:
     else:
         text = sys.stdin.buffer.read().decode("utf-8", errors="replace")
 
-    # English-only graceful decline, matching the two scanners.
-    if not is_probably_english(text):
-        print(json.dumps({"non_english": True, "document": text, "suggestions": [],
+    lang = detect_language(text)
+
+    # Language route, matching the two scanners: English and Spanish are
+    # supported; unsupported languages decline.
+    if lang == "other":
+        print(json.dumps({"non_english": True, "language": "other", "document": text,
+                          "suggestions": [],
                           "counts": {"total": 0, "hard": 0, "soft": 0,
                                      "by_category": {}, "structure_flags": []}},
                          indent=2))
-        print("note: input appears non-English; co-writer declined (English-only).", file=sys.stderr)
+        print("note: input appears to be an unsupported language; co-writer declined (supported: English, Spanish).", file=sys.stderr)
         return 0
 
-    suggestions = build_suggestions(text)
-    struct = structure_scan(text)
+    suggestions = build_suggestions(text, lang=lang)
+    struct = structure_scan(text, lang=lang)
     out = {
+        "language": lang,
         "document": text,
         "suggestions": suggestions,
         "counts": counts_block(suggestions, struct),
