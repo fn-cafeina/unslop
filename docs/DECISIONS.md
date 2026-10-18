@@ -36,6 +36,11 @@ matrix is re-run.
 extends, but the ceiling needs a third allowance), or corpus evidence shows the
 Spanish detectors misfiring on domain prose.
 
+**Where the rule lives:** in `SKILL.md` (Language) and the routed command
+files, not in `references/core-contract.md`. The contract is pinned to a
+650-word budget by a core-runner check (`compact_contract`), and it sat at 644
+words; the language rule is routing, which SKILL.md owns. Keep it there.
+
 **Source:** `docs/PRODUCT.md` (Bounds), `references/taboo-phrases-es.md`,
 `scripts/patterns_es.py`, `evals/fixtures/contracts/scanner-examples.json`.
 

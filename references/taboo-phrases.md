@@ -4,6 +4,9 @@ AI-generated text follows predictable patterns. This reference catalogs common t
 
 Quoted examples are exempt by default. When you're documenting bad AI writing, sentences inside quotes, markdown blockquotes, or code fences are illustrative examples rather than prose to rewrite.
 
+Spanish patterns live in `references/taboo-phrases-es.md` and share these categories;
+the two catalogs are kept in parity with the scanner tables by `evals/check_taboo_parity.py`.
+
 ## Table of Contents
 
 1. [Throat-Clearing Openers](#throat-clearing-openers)

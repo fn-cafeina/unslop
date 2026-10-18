@@ -383,7 +383,9 @@ labels. Calls, uncached input tokens, output tokens, and elapsed time are record
 
 Older cross-provider model-parity tables remain in `references/pipeline.md` as ancillary
 engineering history. They are not acceptance evidence and do not replace the Luna-vs-Luna
-core comparison.
+core comparison. The frozen core corpus, the tiering tables, and the recorded results are
+English; Spanish support is covered by the same scanners, gates and behavioral cases, and its
+own silhouette corpus, but it has no core benchmark of its own yet.
 
 ## Standalone Scripts
 

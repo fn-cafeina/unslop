@@ -103,6 +103,11 @@ Tiering is measured, not assumed; `evals/run_model_parity.py` re-measures it and
 Touching a model-dependent feature means re-running the parity evals across
 both the GPT and Anthropic spectrums.
 
+These tiering runs are English. Spanish goes through the same gates with its own
+deterministic and behavioral evidence, but no Spanish tiering table has been
+measured yet, so treat English tiering as the current evidence and not as a
+Spanish claim.
+
 ## Growth
 
 Detection catalogs decay as generators evolve. Growth comes from adversarial refresh:
