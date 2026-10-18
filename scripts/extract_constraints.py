@@ -17,7 +17,13 @@ import argparse
 import sys
 import re
 import json
+from pathlib import Path
 from typing import TypedDict
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from _lang import detect_language  # noqa: E402
 
 
 class Constraint(TypedDict):
@@ -98,13 +104,80 @@ PROPER_NOUN_INDICATORS = [
 ]
 
 
-def extract_constraints(text: str) -> list[Constraint]:
-    """Extract all must-preserve constraints from text."""
+
+# Spanish constraints. Same type names as the English table so downstream
+# validation, evidence, and reports keep one vocabulary. What changes is the
+# surface: comma decimals, currency after the amount, dd/mm/yyyy dates, quarter
+# names, y/o, and Spanish document references.
+PATTERNS_ES: dict[str, str] = {
+    "currency": r"(?:€\s*\d[\d.,]*|\d[\d.,]*\s*(?:€|euros?|millones?\s+de\s+euros?|pesos?|d[óo]lares?))",
+
+    "percentage": r"\d+[.,]?\d*\s?%",
+
+    "date_iso": r"\d{4}-\d{2}-\d{2}",
+
+    "date_quarter": r"(?:primer|segundo|tercer|cuarto)\s+trimestre(?:\s+de\s+\d{4})?|T[1-4]\s+(?:de\s+)?\d{4}",
+
+    "date_natural": r"\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+de\s+\d{4}|\d{1,2}/\d{1,2}/\d{4}",
+
+    "year": r"\b(?:19|20)\d{2}\b",
+
+    "time": r"\d{1,2}:\d{2}(?::\d{2})?\s*(?:h|horas)?\b",
+
+    "magnitude_number": r"\b\d[\d.,]*\s+(?:mil|millones?|miles\s+de\s+millones)\b",
+
+    "measurement": r"\d+[.,]?\d*\s*(?:°C|°F|ms|s|seg|segundos?|min|minutos?|h|horas?|d[íi]as?|semanas?|meses|a[ñn]os?|KB|MB|GB|TB|kg|g|km|cm|mm|m|litros?|L)\b",
+
+    "phone": r"\b(?:\+34\s?)?(?:6|7|9)\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b",
+
+    "range": r"\d+[.,]?\d*\s*(?:[-–]|\s+a\s+)\s*\d+[.,]?\d*(?:\s*(?:%|a[ñn]os?|meses|d[íi]as?))?",
+
+    "url": r"https?://[^\s\)\]\>\"\']+",
+
+    "email": r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+
+    "code": r"`[^`]+`",
+
+    "quote": r'["“«][^"“”«»]{10,}["”»]',
+
+    "reference": r"\b(?:Art[íi]culos?|Art\.|Secciones?|Cl[áa]usulas?|P[áa]rrafos?|Figuras?|Fig\.|Tablas?|Anexos?|Cap[íi]tulos?|Ap[ée]ndices?|Reglas?)\s+\d+[A-Za-z]?(?:\([a-z0-9]+\))?(?:[.\-]\d+)*",
+
+    "version": r"v?\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9]+)?",
+
+    "api_endpoint": r"(?<![\w])/(?:api|v\d+)(?:/[\w-]+)+|(?<![\w])/[\w-]+(?:/[\w-]+){2,}",
+
+    "and_or": r"\by/o\b",
+
+    "count": r"\b\d+(?:\.\d{3})*\s+(?:usuarios?|clientes?|empleados?|empresas?|equipos?|personas|ingenieros?|desarrolladores?|elementos?|productos?|pedidos?|transacciones?|solicitudes?|consultas?|filas?|registros?)\b",
+}
+
+PROPER_NOUN_INDICATORS_ES = [
+    r"\b[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)+\b",
+    r"\b[A-ZÁÉÍÓÚÑ][\wáéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑ][\wáéíóúñü]+)*\s+"
+    r"(?:S\.?A\.?(?:\s+U\.?)?|S\.?L\.?U?\.?|S\.?Coop\.?)\b",
+    r"\b(?:Sr|Sra|Srta|D|Dra|Lic|Ing|Prof)\.?\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+\b",
+]
+
+PATTERN_TABLES = {
+    "en": (PATTERNS, PROPER_NOUN_INDICATORS),
+    "es": (PATTERNS_ES, PROPER_NOUN_INDICATORS_ES),
+}
+
+
+def extract_constraints(text: str, lang: str | None = None) -> list[Constraint]:
+    """Extract all must-preserve constraints from text.
+
+    ``lang`` selects the constraint table; ``None`` detects it. Unsupported
+    languages fall back to the English table, matching the scanners.
+    """
+    if lang is None:
+        lang = detect_language(text)
+    patterns, proper_noun_indicators = PATTERN_TABLES["es" if lang == "es" else "en"]
     constraints: list[Constraint] = []
     seen_spans: set[tuple[int, int]] = set()
 
     # Extract pattern-based constraints
-    for constraint_type, pattern in PATTERNS.items():
+    for constraint_type, pattern in patterns.items():
         for match in re.finditer(pattern, text, re.IGNORECASE if constraint_type.startswith("date") else 0):
             span = (match.start(), match.end())
             if span not in seen_spans:
@@ -117,7 +190,7 @@ def extract_constraints(text: str) -> list[Constraint]:
                 })
 
     # Extract proper nouns (simplified)
-    for pattern in PROPER_NOUN_INDICATORS:
+    for pattern in proper_noun_indicators:
         for match in re.finditer(pattern, text):
             span = (match.start(), match.end())
             # Don't add if overlapping with existing constraint

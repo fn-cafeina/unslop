@@ -19,6 +19,7 @@ from typing import TypedDict
 
 # Import constraint extraction
 from extract_constraints import extract_constraints, Constraint
+from _lang import detect_language
 
 
 class ValidationResult(TypedDict):
@@ -40,6 +41,17 @@ _MONTHS = [
     "january", "february", "march", "april", "may", "june", "july",
     "august", "september", "october", "november", "december",
 ]
+
+# Spanish months joined into the same lookup: a document uses one language, so
+# matching against both lists can only make the presence check more forgiving,
+# never silently stricter.
+_MONTHS_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+    "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+_MONTHS_ALL = _MONTHS + _MONTHS_ES
+_QUARTER_ORDINAL_EN = {"1": "first", "2": "second", "3": "third", "4": "fourth"}
+_QUARTER_ORDINAL_ES = {"1": "primer", "2": "segundo", "3": "tercer", "4": "cuarto"}
 
 
 def normalize_value(value: str) -> str:
@@ -233,22 +245,32 @@ def find_constraint_in_text(constraint: Constraint, text: str) -> bool:
 
     # Dates: the year alone is not enough — a changed month is a changed fact.
     if ctype == "date_quarter":
-        year_match = re.search(r'\d{4}', value)
-        if not (year_match and year_match.group() in text):
+        low_value, low_text = value.lower(), text.lower()
+        year_match = re.search(r'\d{4}', low_value)
+        if year_match and year_match.group() not in text:
             return False
-        q = re.search(r'q([1-4])', value.lower())
-        if not q:
-            return False
-        ordinal = {"1": "first", "2": "second", "3": "third", "4": "fourth"}[q.group(1)]
-        low_text = text.lower()
-        return q.group(0) in low_text or re.search(ordinal + r'\s+quarter', low_text) is not None
+        q = re.search(r'q([1-4])', low_value)
+        if q:
+            ordinal = _QUARTER_ORDINAL_EN[q.group(1)]
+            spanish = _QUARTER_ORDINAL_ES[q.group(1)]
+            return (q.group(0) in low_text
+                    or re.search(ordinal + r'\s+quarter', low_text) is not None
+                    or re.search(spanish + r'\s+trimestre', low_text) is not None)
+        es = re.search(r'(primer|segundo|tercer|cuarto)\s+trimestre', low_value)
+        if es:
+            return re.search(es.group(1) + r'\s+trimestre', low_text) is not None
+        t = re.search(r't([1-4])', low_value)
+        if t:
+            return (bool(re.search(r't' + t.group(1) + r'\b', low_text))
+                    or re.search(_QUARTER_ORDINAL_ES[t.group(1)] + r'\s+trimestre', low_text) is not None)
+        return bool(year_match)
 
     if ctype.startswith("date"):
         year_match = re.search(r'\d{4}', value)
         if not (year_match and year_match.group() in text):
             return False
         low = value.lower()
-        month = next((mo for mo in _MONTHS if mo[:3] in low), None)
+        month = next((mo for mo in _MONTHS_ALL if mo[:3] in low), None)
         if month and month[:3] not in text.lower():
             return False
         quarter = re.search(r'q[1-4]', low)
@@ -264,12 +286,30 @@ def find_constraint_in_text(constraint: Constraint, text: str) -> bool:
             return True
 
     if ctype == "proper_noun":
-        words = re.findall(r'[A-Z][a-z]+', value)
+        words = re.findall(r'[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+', value)
         if words and all(re.search(r'\b' + re.escape(word) + r'\b', text, re.I) for word in words):
             return True
 
     return False
 
+
+_NEGATION_RE_ES = re.compile(
+    r"\b(?:no|nunca|jam[áa]s|sin|ni|tampoco|nada|nadie|ning[úu]n[ao]?|"
+    r"salvo|excepto|en\s+vez\s+de|en\s+lugar\s+de)\b", re.I)
+_SCOPE_RE_ES = re.compile(
+    r"\b(?:la\s+mayor[íi]a|la\s+minor[íi]a|todos?|todas?|algun[oa]s?|varios|varias|"
+    r"poc[oa]s|varias?|siempre|normalmente|habitualmente|casi|"
+    r"aproximadamente|alrededor\s+de|solo|solamente|únicamente)\b", re.I)
+_CONDITIONAL_RE_ES = re.compile(
+    r"\b(?:si|a\s+menos\s+que|siempre\s+que|solo\s+si|suponiendo\s+que|"
+    r"dado\s+que|en\s+caso\s+de|salvo|excepto|aparte\s+de|"
+    r"a\s+excepci[óo]n\s+de)\b", re.I)
+_WEAK_MODAL_RE_ES = re.compile(
+    r"\b(?:puede|pueden|podr[íi]a|podr[íi]an|deber[íi]a|deber[íi]an|quiz[áa]|"
+    r"probablemente|parece|parecen|sugiere|sugieren|es\s+posible)\b", re.I)
+_STRONG_MODAL_RE_ES = re.compile(
+    r"\b(?:har[áa]|har[áa]n|debe|deben|siempre|definitivamente|"
+    r"garantiza|garantizan|demuestra|demuestran|prueba|prueban)\b", re.I)
 
 _NEGATION_RE = re.compile(
     r"\b(?:not|never|no|cannot|can't|won't|don't|doesn't|didn't|isn't|aren't|"
@@ -287,29 +327,34 @@ _STRONG_MODAL_RE = re.compile(
     r"\b(?:will|must|always|definitely|certainly|guarantees?|proves?)\b", re.I)
 
 
-def semantic_drift_warnings(original: str, transformed: str) -> list[str]:
+def semantic_drift_warnings(original: str, transformed: str, lang: str = "en") -> list[str]:
     """Warn when meaning-bearing words present in the original vanish in the rewrite."""
+    negation_re, scope_re, conditional_re, weak_re, strong_re = (
+        (_NEGATION_RE_ES, _SCOPE_RE_ES, _CONDITIONAL_RE_ES, _WEAK_MODAL_RE_ES, _STRONG_MODAL_RE_ES)
+        if lang == "es"
+        else (_NEGATION_RE, _SCOPE_RE, _CONDITIONAL_RE, _WEAK_MODAL_RE, _STRONG_MODAL_RE)
+    )
     out: list[str] = []
     o, t = original.lower(), transformed.lower()
 
-    on, tn = len(_NEGATION_RE.findall(o)), len(_NEGATION_RE.findall(t))
+    on, tn = len(negation_re.findall(o)), len(negation_re.findall(t))
     if on > tn:
         out.append(
             f"Negation count dropped {on}->{tn}. Verify no claim was inverted or "
             "weakened (e.g. 'does not support' -> 'supports').")
 
-    missing_scope = sorted({w for w in _SCOPE_RE.findall(o)} - {w for w in _SCOPE_RE.findall(t)})
+    missing_scope = sorted({w for w in scope_re.findall(o)} - {w for w in scope_re.findall(t)})
     for w in missing_scope:
         out.append(f"Scope/precision word '{w}' not in output. Verify the claim's scope is unchanged.")
 
-    oc, tc = len(_CONDITIONAL_RE.findall(o)), len(_CONDITIONAL_RE.findall(t))
+    oc, tc = len(conditional_re.findall(o)), len(conditional_re.findall(t))
     if oc > tc:
         out.append(
             f"Conditional count dropped {oc}->{tc}. Verify a conditional claim "
             "wasn't turned into an unconditional one.")
 
-    ow, tw = len(_WEAK_MODAL_RE.findall(o)), len(_WEAK_MODAL_RE.findall(t))
-    os, ts = len(_STRONG_MODAL_RE.findall(o)), len(_STRONG_MODAL_RE.findall(t))
+    ow, tw = len(weak_re.findall(o)), len(weak_re.findall(t))
+    os, ts = len(strong_re.findall(o)), len(strong_re.findall(t))
     if ow > tw and ts > os:
         out.append("Hedged claim may have been strengthened. Verify uncertainty was not turned into certainty.")
 
@@ -319,12 +364,16 @@ def semantic_drift_warnings(original: str, transformed: str) -> list[str]:
 def validate_preservation(
     original_text: str,
     transformed_text: str,
-    constraints: list[Constraint] | None = None
+    constraints: list[Constraint] | None = None,
+    lang: str | None = None
 ) -> ValidationResult:
     """Validate that all constraints are preserved in transformed text."""
 
+    if lang is None:
+        lang = detect_language(original_text)
+
     if constraints is None:
-        constraints = extract_constraints(original_text)
+        constraints = extract_constraints(original_text, lang=lang)
 
     missing: list[Constraint] = []
     warnings: list[str] = []
@@ -346,7 +395,7 @@ def validate_preservation(
     # de-hedging rules are most likely to delete and that pure fact-matching
     # cannot see. Surfaced as warnings so the rewrite gets a human re-check;
     # de-slopping legitimately removes some, so they don't hard-fail on their own.
-    warnings.extend(semantic_drift_warnings(original_text, transformed_text))
+    warnings.extend(semantic_drift_warnings(original_text, transformed_text, lang=lang))
 
     preserved = len(constraints) - len(missing)
 
@@ -387,7 +436,9 @@ def main() -> None:
             data = json.load(f)
             constraints = data.get("constraints", [])
 
-    result = validate_preservation(original_text, transformed_text, constraints)
+    result = validate_preservation(
+        original_text, transformed_text, constraints, lang=detect_language(original_text)
+    )
 
     # Output result
     output = {

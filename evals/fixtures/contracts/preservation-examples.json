@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exact_total": 10,
+  "exact_total": 14,
   "examples": [
     {
       "id": "PRES-08",
@@ -143,6 +143,72 @@
           "type": "json",
           "path": "missing_count",
           "gte": 1
+        }
+      ]
+    },
+    {
+      "id": "PRES-ES-01",
+      "args": [
+        "evals/fixtures/pres_es_01_original.txt",
+        "evals/fixtures/pres_es_01_transformed.txt"
+      ],
+      "assertions": [
+        {
+          "type": "json",
+          "path": "missing_count",
+          "equals": 0
+        },
+        {
+          "type": "json",
+          "path": "passed",
+          "equals": true
+        }
+      ]
+    },
+    {
+      "id": "PRES-ES-02",
+      "args": [
+        "evals/fixtures/pres_es_02_original.txt",
+        "evals/fixtures/pres_es_02_transformed.txt"
+      ],
+      "assertions": [
+        {
+          "type": "json",
+          "path": "missing_count",
+          "gte": 1
+        }
+      ]
+    },
+    {
+      "id": "PRES-ES-03",
+      "args": [
+        "evals/fixtures/pres_es_03_original.txt",
+        "evals/fixtures/pres_es_03_transformed.txt"
+      ],
+      "assertions": [
+        {
+          "type": "json",
+          "path": "missing_count",
+          "gte": 2
+        }
+      ]
+    },
+    {
+      "id": "PRES-ES-04",
+      "args": [
+        "--strict",
+        "evals/fixtures/pres_es_04_strict.txt",
+        "evals/fixtures/pres_es_04_strict_transformed.txt"
+      ],
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "json",
+          "path": "missing_count",
+          "equals": 0
         }
       ]
     }
