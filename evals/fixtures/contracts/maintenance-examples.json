@@ -1,7 +1,7 @@
 {
   "schema": "unslop-maintenance-contract-v1",
   "version": 1,
-  "exact_total": 17,
+  "exact_total": 23,
   "examples": [
     {
       "id": "AS-03",
@@ -154,6 +154,33 @@
       ]
     },
     {
+      "id": "LANG-ES-01",
+      "category": "language_support",
+      "title": "Spanish paragraph is scanned by structure_scan, not declined",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/structure_scan.py"
+      ],
+      "stdin": "El rápido zorro marrón salta sobre el perro perezoso. La casa está cerca del río y los niños juegan en el jardín todas las tardes después de la escuela.",
+      "failure_mode": "Spanish is a supported language; declining it would silently skip the product's whole validation battery.",
+      "correct_behavior": "language es, zero violations, exit 0.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "stdout_not_contains",
+          "value": "non_english"
+        }
+      ]
+    },
+    {
       "id": "LANG-ES-02",
       "category": "language_support",
       "title": "Spanish slop is detected by banned_phrase_scan",
@@ -239,6 +266,33 @@
       ]
     },
     {
+      "id": "LANG-OTHER-02",
+      "category": "language_decline",
+      "title": "French is declined by structure_scan",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/structure_scan.py"
+      ],
+      "stdin": "La question n'est pas seulement une question de temps, mais aussi de clarté du propos. Le rapport est à propos du projet de réforme.",
+      "failure_mode": "Structure metrics are meaningless on unsupported prose but would still be reported.",
+      "correct_behavior": "Unsupported language detected: non_english true, language other, exit 0.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"non_english\": true"
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"other\""
+        }
+      ]
+    },
+    {
       "id": "LANG-SCANFIRST-01",
       "category": "language_decline",
       "title": "English headline stacks are scanned, not declined",
@@ -262,6 +316,179 @@
         {
           "type": "stdout_not_contains",
           "value": "\"non_english\": true"
+        }
+      ]
+    },
+    {
+      "id": "SIL-ES-01",
+      "category": "language_support",
+      "title": "silhouette_scan flags a templated Spanish essay",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/silhouette_scan.py",
+        "evals/fixtures/silhouette/corpus/ai_es/01_ensayo_tres_pilares.txt"
+      ],
+      "failure_mode": "Spanish silhouette support that never fires would let templated Spanish pass the battery that blocks English templates.",
+      "correct_behavior": "Exit 1 with silhouette_penalty flagged, language es.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 1
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "stdout_contains",
+          "value": "silhouette_penalty"
+        }
+      ]
+    },
+    {
+      "id": "SIL-ES-02",
+      "category": "language_support",
+      "title": "silhouette_scan leaves a human Spanish document clean",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/silhouette_scan.py",
+        "evals/fixtures/silhouette/corpus/human_es/05_readme.txt"
+      ],
+      "failure_mode": "A Spanish reference miscalibrated low would flag ordinary human Spanish prose as templated.",
+      "correct_behavior": "Exit 0, language es, no penalty flag.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "stdout_not_contains",
+          "value": "silhouette_penalty"
+        }
+      ]
+    },
+    {
+      "id": "SIL-ES-REF",
+      "category": "language_support",
+      "title": "Spanish human reference stays in sync and separates",
+      "target": "script",
+      "command": [
+        "python3",
+        "evals/check_silhouette.py",
+        "--lang",
+        "es"
+      ],
+      "failure_mode": "Editing the Spanish corpus or the silhouette metrics without regenerating the Spanish reference would leave the scanner calibrated against a stale distribution.",
+      "correct_behavior": "Reference drift gate and separation both pass for Spanish.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "reference ok (es)"
+        },
+        {
+          "type": "stdout_contains",
+          "value": "separation ok (es)"
+        }
+      ]
+    },
+    {
+      "id": "ES-STRUCT-01",
+      "category": "language_support",
+      "title": "structure_scan flags Spanish connective openers",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/structure_scan.py",
+        "evals/fixtures/structure/es01_connective_openers.md"
+      ],
+      "failure_mode": "A Spanish lexicon that never fires leaves Spanish structural tells unguarded while English ones block.",
+      "correct_behavior": "Exit 1 with connective_paragraph_openers flagged and language es.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 1
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "stdout_contains",
+          "value": "connective_paragraph_openers"
+        }
+      ]
+    },
+    {
+      "id": "ES-READ-01",
+      "category": "language_support",
+      "title": "readability_metrics reports the Spanish index and no Flesch grade",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/readability_metrics.py",
+        "evals/fixtures/silhouette/corpus/human_es/05_readme.txt"
+      ],
+      "failure_mode": "Running English phonics on Spanish would report a meaningless Flesch grade instead of the Spanish index.",
+      "correct_behavior": "language es, a Szigriszt-Pazos score, and a null Flesch grade.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "json",
+          "path": "szigriszt_pazos",
+          "gte": 1
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"flesch_kincaid_grade\": null"
+        }
+      ]
+    },
+    {
+      "id": "ES-SUGGEST-01",
+      "category": "language_support",
+      "title": "suggest.py returns Spanish rationales with unchanged spans",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/suggest.py"
+      ],
+      "stdin": "Cabe destacar que la sinergia entre equipos desempeña un papel crucial en el proceso de migración.",
+      "failure_mode": "A Spanish document reviewed by the co-writer would come back with English rationales, or with spans the agent cannot apply.",
+      "correct_behavior": "language es and Spanish rationale templates, one suggestion per finding.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "stdout_contains",
+          "value": "sustituye"
+        },
+        {
+          "type": "json",
+          "path": "counts.total",
+          "gte": 3
         }
       ]
     },
@@ -332,60 +559,6 @@
           "type": "json",
           "path": "flagged",
           "equals": {}
-        }
-      ]
-    },
-    {
-      "id": "LANG-ES-01",
-      "category": "language_support",
-      "title": "Spanish paragraph is scanned by structure_scan, not declined",
-      "target": "script",
-      "command": [
-        "python3",
-        "scripts/structure_scan.py"
-      ],
-      "stdin": "El rápido zorro marrón salta sobre el perro perezoso. La casa está cerca del río y los niños juegan en el jardín todas las tardes después de la escuela.",
-      "failure_mode": "Spanish is a supported language; declining it would silently skip the product's whole validation battery.",
-      "correct_behavior": "language es, zero violations, exit 0.",
-      "assertions": [
-        {
-          "type": "exit_code",
-          "equals": 0
-        },
-        {
-          "type": "stdout_contains",
-          "value": "\"language\": \"es\""
-        },
-        {
-          "type": "stdout_not_contains",
-          "value": "non_english"
-        }
-      ]
-    },
-    {
-      "id": "LANG-OTHER-02",
-      "category": "language_decline",
-      "title": "French is declined by structure_scan",
-      "target": "script",
-      "command": [
-        "python3",
-        "scripts/structure_scan.py"
-      ],
-      "stdin": "La question n'est pas seulement une question de temps, mais aussi de clarté du propos. Le rapport est à propos du projet de réforme.",
-      "failure_mode": "Structure metrics are meaningless on unsupported prose but would still be reported.",
-      "correct_behavior": "Unsupported language detected: non_english true, language other, exit 0.",
-      "assertions": [
-        {
-          "type": "exit_code",
-          "equals": 0
-        },
-        {
-          "type": "stdout_contains",
-          "value": "\"non_english\": true"
-        },
-        {
-          "type": "stdout_contains",
-          "value": "\"language\": \"other\""
         }
       ]
     },
