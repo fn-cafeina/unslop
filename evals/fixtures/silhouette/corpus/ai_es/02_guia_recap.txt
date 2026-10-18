@@ -1,0 +1,11 @@
+Esta guía explica cómo migrar una base de datos PostgreSQL sin cortar el servicio. Veremos la preparación, la ventana de mantenimiento y la verificación posterior. Al terminar, tendrás un procedimiento repetible para tu equipo.
+
+La preparación empieza por medir. Antes de tocar nada, registra el tamaño de la base, el tráfico por hora y la duración de tus copias de seguridad.
+
+Además, conviene preparar un entorno de ensayo con datos reales anonimizados. El ensayo revela los cuellos de botella que la teoría esconde.
+
+En consecuencia, la ventana de mantenimiento se planifica con un colchón del cincuenta por ciento. Si el ensayo tardó dos horas, reserva tres.
+
+Asimismo, la verificación posterior no es opcional. Comprueba los recuentos de filas, los índices y las consultas más lentas del día anterior.
+
+En resumen, la migración funciona cuando la preparación se mide, el ensayo usa datos reales y la verificación compara números. La preparación, la ventana y la verificación forman un procedimiento repetible. La migración es un procedimiento de equipo, no un acto de valentía.

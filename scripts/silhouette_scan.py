@@ -60,8 +60,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from structure_scan import STOPWORDS as _STRUCTURE_STOPWORDS  # noqa: E402
+from structure_scan import STOPWORDS_ES as _STRUCTURE_STOPWORDS_ES  # noqa: E402
 from _lang import (  # noqa: E402
-    is_probably_english,
+    detect_language,
     paragraphs as _prose_paragraphs,
     words,
 )
@@ -70,6 +71,10 @@ from _lang import (  # noqa: E402
 REFERENCE_PATH = (
     Path(__file__).resolve().parent.parent
     / "evals" / "fixtures" / "silhouette" / "human_reference.json"
+)
+REFERENCE_PATH_ES = (
+    Path(__file__).resolve().parent.parent
+    / "evals" / "fixtures" / "silhouette" / "human_reference_es.json"
 )
 
 # Flag the document when the composite reaches this penalty (research-validated).
@@ -103,9 +108,50 @@ ROLE_CUES = {
 }
 ROLE_RE = {k: re.compile(v, re.I) for k, v in ROLE_CUES.items()}
 
+# Spanish stopword superset and discourse-cue classes. Same five role classes,
+# same mechanics; only the cue vocabulary is Spanish.
+SILHOUETTE_STOPWORDS_ES = _STRUCTURE_STOPWORDS_ES | frozenset({
+    "nuestro", "nuestra", "nuestros", "nuestras", "vuestro", "vuestra",
+    "ellos", "ellas", "usted", "ustedes", "nosotros", "qué", "quién",
+    "quiénes", "cuál", "cuáles", "cómo", "cuándo", "dónde", "más", "mucho",
+    "muchos", "mucha", "muchas", "muy", "cada", "otro", "otra", "otros",
+    "otras", "mismo", "misma", "todos", "todas", "algunos", "algunas",
+    "varios", "varias", "ambos", "entre", "sobre", "hasta", "desde",
+    "aunque", "mientras", "solo", "también", "tampoco", "además", "nunca",
+    "siempre", "ahora", "después", "antes", "hoy", "ayer", "mañana", "algo",
+    "alguien", "nada", "nadie", "alguno", "ninguna", "ninguno", "hacia",
+    "según", "contra", "durante", "tras", "entonces", "así", "aquí", "allí",
+})
 
-def content(text: str) -> list[str]:
-    return [w for w in words(text) if len(w) > 3 and w not in SILHOUETTE_STOPWORDS]
+ROLE_CUES_ES = {
+    "contrast": r"^(en cambio|sin embargo|no obstante|por el contrario|"
+                r"en contraste|ahora bien|dicho esto|aun así|eso sí|"
+                r"por otro lado)",
+    "addition": r"^(además|asimismo|igualmente|también|de igual modo|"
+                r"del mismo modo|incluso|encima)",
+    "conclusion": r"^(en conclusión|en definitiva|en última instancia|"
+                  r"en resumen|para resumir|como hemos visto|al final|"
+                  r"recordemos|el futuro)",
+    "enumeration": r"^(primero|en primer lugar|para empezar|1\.|paso \d|"
+                   r"hay \d|existen \d)",
+    "cause": r"^(por lo tanto|por eso|así pues|en consecuencia|de ahí|"
+             r"como resultado|por consiguiente|dado que|debido a)",
+}
+ROLE_RE_ES = {k: re.compile(v, re.I) for k, v in ROLE_CUES_ES.items()}
+
+LEXICONS = {
+    "en": {"stopwords": SILHOUETTE_STOPWORDS, "role_re": ROLE_RE},
+    "es": {"stopwords": SILHOUETTE_STOPWORDS_ES, "role_re": ROLE_RE_ES},
+}
+
+
+def lexicon_for(lang: str) -> dict:
+    return LEXICONS["es"] if lang == "es" else LEXICONS["en"]
+
+
+def content(text: str, stopwords: frozenset[str] | None = None) -> list[str]:
+    stopwords = SILHOUETTE_STOPWORDS if stopwords is None else stopwords
+    return [w for w in words(text) if len(w) > 3 and w not in stopwords]
 
 
 def paragraphs(text: str) -> list[str]:
@@ -114,30 +160,32 @@ def paragraphs(text: str) -> list[str]:
 
 # ---------------- METRICS (verbatim from the validated prototype) ----------------
 
-def m_scaffold_opener_share(paras: list[str]):
+def m_scaffold_opener_share(paras: list[str], lex: dict | None = None):
     """Share of body paragraphs opening with a discourse-connective/scaffold cue."""
+    lex = lexicon_for("en") if lex is None else lex
     body = paras[1:] if len(paras) > 1 else paras
     if not body:
         return 0.0
     hits = 0
     for p in body:
-        for rx in ROLE_RE.values():
+        for rx in lex["role_re"].values():
             if rx.search(p):
                 hits += 1
                 break
     return round(hits / len(body), 3)
 
 
-def m_role_entropy(paras: list[str]):
+def m_role_entropy(paras: list[str], lex: dict | None = None):
     """Shannon entropy (bits) over opener role classes incl. 'topic' (none).
     A human never opens paragraphs with cue classes -> entropy 0; a template
     rotates several distinct cue classes -> positive entropy."""
+    lex = lexicon_for("en") if lex is None else lex
     if len(paras) < 3:
         return None
     roles = []
     for p in paras:
         r = "topic"
-        for name, rx in ROLE_RE.items():
+        for name, rx in lex["role_re"].items():
             if rx.search(p):
                 r = name
                 break
@@ -148,18 +196,19 @@ def m_role_entropy(paras: list[str]):
     return round(ent, 3)
 
 
-def m_preview_fulfillment(paras: list[str]):
+def m_preview_fulfillment(paras: list[str], lex: dict | None = None):
     """Share of body paragraphs whose opening content word appears in the
     intro paragraph (outline-following / preview-then-fulfill tell)."""
+    lex = lexicon_for("en") if lex is None else lex
     if len(paras) < 4:
         return None
-    intro = set(content(paras[0]))
+    intro = set(content(paras[0], lex["stopwords"]))
     if not intro:
         return 0.0
     body = paras[1:-1] if len(paras) > 2 else paras[1:]
     hits = tot = 0
     for p in body:
-        cs = content(p)
+        cs = content(p, lex["stopwords"])
         if not cs:
             continue
         tot += 1
@@ -168,35 +217,37 @@ def m_preview_fulfillment(paras: list[str]):
     return round(hits / tot, 3) if tot else 0.0
 
 
-def m_callback_content(paras: list[str]):
+def m_callback_content(paras: list[str], lex: dict | None = None):
     """Content words introduced in the first third, ABSENT from the middle,
     reappearing in the last third: a recap loop, not a sustained topic."""
+    lex = lexicon_for("en") if lex is None else lex
     n = len(paras)
     if n < 5:
         return None
     third = max(1, n // 3)
-    early = set().union(*[set(content(paras[i])) for i in range(third)])
-    mid = (set().union(*[set(content(paras[i])) for i in range(third, n - third)])
+    early = set().union(*[set(content(paras[i], lex["stopwords"])) for i in range(third)])
+    mid = (set().union(*[set(content(paras[i], lex["stopwords"])) for i in range(third, n - third)])
            if n - 2 * third > 0 else set())
-    late = set().union(*[set(content(paras[i])) for i in range(n - third, n)])
+    late = set().union(*[set(content(paras[i], lex["stopwords"])) for i in range(n - third, n)])
     cb = (early & late) - mid
     return round(len(cb) / n, 3)
 
 
-def m_heading_preview(text: str):
+def m_heading_preview(text: str, lex: dict | None = None):
     """Share of ## heading head-nouns whose key word also appears in the intro
     paragraph = outline preview-then-fulfill. Measures outline-following, not
     heading presence, so it is retained under --genre docs."""
+    lex = lexicon_for("en") if lex is None else lex
     heads = re.findall(r"(?m)^\s{0,3}#{2,3}\s+(.*)$", text)
     if len(heads) < 3:
         return None
     paras = paragraphs(text)
-    intro = set(content(paras[0])) if paras else set()
+    intro = set(content(paras[0], lex["stopwords"])) if paras else set()
     if not intro:
         return 0.0
     hit = 0
     for h in heads:
-        hc = set(content(h))
+        hc = set(content(h, lex["stopwords"]))
         if hc & intro:
             hit += 1
     return round(hit / len(heads), 3)
@@ -234,13 +285,14 @@ SUGGESTIONS = {
 }
 
 
-def compute_metrics(text: str, paras: list[str]) -> dict:
+def compute_metrics(text: str, paras: list[str], lang: str = "en") -> dict:
+    lex = lexicon_for(lang)
     row = {}
     for name in METRIC_ORDER:
         if name in PARA_METRICS:
-            row[name] = PARA_METRICS[name](paras)
+            row[name] = PARA_METRICS[name](paras, lex)
         else:
-            row[name] = TEXT_METRICS[name](text)
+            row[name] = TEXT_METRICS[name](text, lex)
     return row
 
 
@@ -271,7 +323,9 @@ GENRE_SUPPRESSIONS = {
 }
 
 
-def scan(text: str, reference: dict, genre: str = "prose") -> dict:
+def scan(text: str, reference: dict, genre: str = "prose", lang: str | None = None) -> dict:
+    if lang is None:
+        lang = detect_language(text)
     # Genre is a passthrough echoed for parity with structure_scan.
     # --genre docs suppresses ONLY callback_content: reference docs, specs, and
     # doctrine conventionally reprise opening themes at the end, which is not
@@ -283,6 +337,7 @@ def scan(text: str, reference: dict, genre: str = "prose") -> dict:
     # >=3-paragraph structure these metrics need.
     paras = paragraphs(text)
     base = {
+        "language": lang,
         "genre": genre,
         "prose_paragraphs": len(paras),
     }
@@ -297,7 +352,7 @@ def scan(text: str, reference: dict, genre: str = "prose") -> dict:
         })
         return base
 
-    metrics = compute_metrics(text, paras)
+    metrics = compute_metrics(text, paras, lang)
     contributions = {}
     penalty = 0.0
     flags = []
@@ -359,10 +414,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    if not REFERENCE_PATH.exists():
-        print(f"Missing reference: {REFERENCE_PATH}", file=sys.stderr)
-        return 2
-    reference = load_reference(REFERENCE_PATH)
 
     if args.path:
         path = Path(args.path)
@@ -373,11 +424,18 @@ def main(argv: list[str]) -> int:
     else:
         text = sys.stdin.buffer.read().decode("utf-8", errors="replace")
 
-    result = scan(text, reference, args.genre)
+    lang = detect_language(text)
+    reference_path = REFERENCE_PATH_ES if lang == "es" else REFERENCE_PATH
+    if not reference_path.exists():
+        print(f"Missing reference: {reference_path}", file=sys.stderr)
+        return 2
+    reference = load_reference(reference_path)
 
-    if not result.get("flags") and not is_probably_english(text):
-        print(json.dumps({"non_english": True, "flags": [], "penalty": None}, indent=2))
-        print("note: input appears non-English; scanner declined (English-only).", file=sys.stderr)
+    result = scan(text, reference, args.genre, lang)
+
+    if not result.get("flags") and lang == "other":
+        print(json.dumps({"non_english": True, "language": "other", "flags": [], "penalty": None}, indent=2))
+        print("note: input appears to be an unsupported language; scanner declined (supported: English, Spanish).", file=sys.stderr)
         return 0
 
     print(json.dumps(result, indent=2))

@@ -1,0 +1,13 @@
+Estimado equipo:
+
+Esta comunicación resume el estado del proyecto, los riesgos identificados y los próximos pasos. La transparencia, la planificación y la ejecución son las claves de esta fase. Conviene revisarlas juntas antes de la reunión del jueves.
+
+La transparencia guía este informe. Todos los indicadores están disponibles en el panel compartido desde el lunes.
+
+Además, la planificación se ha ajustado al calendario real. El equipo ha reservado dos semanas de colchón para la integración.
+
+Asimismo, la ejecución avanza según lo previsto. Los tres módulos principales están desplegados en el entorno de pruebas.
+
+Por lo tanto, el riesgo principal se reduce al proveedor externo. Su entrega depende de una auditoría que aún no tiene fecha.
+
+En conclusión, la transparencia, la planificación y la ejecución sostienen el proyecto en este punto. Estas tres claves explican el estado actual. El proyecto sigue en pie gracias a ellas.

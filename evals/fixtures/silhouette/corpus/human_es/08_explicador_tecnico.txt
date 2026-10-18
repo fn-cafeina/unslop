@@ -1,0 +1,9 @@
+Un UUID v4 no contiene información sobre el orden en que fue creado, y eso es exactamente lo que se busca cuando se elige como clave primaria.
+
+El precio de esa independencia es el tamaño: dieciséis bytes frente a los ocho de un entero. En una tabla con cien millones de filas la diferencia son ochocientos megabytes de índice, sin contar el coste de mantenerlo en memoria.
+
+Hay un segundo efecto, menos obvio. Los identificadores aleatorios escriben en páginas dispersas del índice, así que cada inserción toca más bloques. Con una carga de escritura alta eso se nota en el tiempo de confirmación.
+
+Los identificadores secuenciales evitan el problema y traen otro: revelan cuántas filas tienes y en qué orden llegaron. Para un panel interno da igual; para una URL pública es una fuga.
+
+La decisión razonable depende de la carga. Si escribes mucho y no expones los números, entero secuencial. Si expones y escribes poco, aleatorio. Si necesitas las dos cosas, hay esquemas híbridos que ordenan por tiempo dentro de cada nodo.

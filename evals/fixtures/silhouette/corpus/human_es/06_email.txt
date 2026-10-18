@@ -1,0 +1,9 @@
+Hola equipo:
+
+Propongo posponer el lanzamiento al jueves. La razón es concreta: la exportación de datos tarda 40 segundos con 60.000 registros y el límite del proveedor son 30.
+
+Dos opciones. Reducir el lote a la mitad y encadenar dos llamadas, o mover la exportación a un trabajo nocturno y avisar por correo cuando termine. La primera toca código de producción; la segunda solo cambia el planificador.
+
+Prefiero la segunda. El riesgo es que la gente deje de mirar el correo y siga esperando en la pantalla. Mitigación: dejar un aviso visible en la interfaz mientras el trabajo está en cola.
+
+Si alguien ve un problema con ese enfoque, que responda hoy. Mañana cierro la decisión y actualizo el plan de pruebas.

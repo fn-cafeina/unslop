@@ -1,0 +1,9 @@
+Escribo documentación técnica desde 2016 y sigo sin saber cuándo un documento está terminado. Lo que sí sé es cuándo está listo para que otra persona lo use.
+
+La diferencia está en las preguntas que el lector no tiene que hacer. Si alguien puede seguir el documento y volver a su tarea sin escribirme, el texto cumple. Si me escribe, el fallo es mío, no suyo.
+
+Durante años intenté que cada guía fuera exhaustiva. Era un error: la exhaustividad retrasa la publicación y la mayoría de los detalles solo importan a quien ya entendió lo esencial.
+
+Mi rutina actual empieza por el caso más común, con sus números reales, y deja los casos raros en una sección aparte que puedo ampliar cuando alguien pregunte.
+
+El resultado es incómodo para mi orgullo y mucho mejor para el equipo. Publico antes y corrijo con datos en lugar de con imaginación.

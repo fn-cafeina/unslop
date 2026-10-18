@@ -1,0 +1,11 @@
+Nuestro nuevo panel de analítica llegó para cambiar la forma en que los equipos entienden sus datos. La analítica, la velocidad y la claridad son las tres dimensiones de esta versión. Juntas explican por qué el panel se siente distinto desde el primer minuto.
+
+La analítica es el corazón del producto. Cada gráfico responde a una pregunta concreta que antes exigía exportar a una hoja de cálculo.
+
+Por otro lado, la velocidad ya no es un lujo. Las consultas que antes tardaban treinta segundos ahora responden en menos de dos.
+
+Además, la claridad guía cada decisión de diseño. Los colores separan categorías, no decoran, y cada cifra muestra su unidad.
+
+En consecuencia, el panel reduce el tiempo entre la pregunta y la respuesta. Esa reducción es el producto.
+
+En conclusión, la analítica, la velocidad y la claridad convierten el panel en algo que se usa a diario. Estas tres dimensiones lo definen. El panel existe para acortar la distancia entre los datos y las decisiones.

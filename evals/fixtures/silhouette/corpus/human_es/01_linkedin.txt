@@ -1,0 +1,9 @@
+El viernes pasado migramos la base de datos de facturación y tardamos cuatro horas más de lo previsto.
+
+El problema no fue la migración. Un índice que nadie había revisado en dos años bloqueó las escrituras durante la ventana de mantenimiento, y las alertas solo saltaron cuando soporte empezó a recibir correos de clientes.
+
+Marina llevaba meses diciendo que ese índice sobraba. Tenía razón, y nadie la escuchó porque su propuesta llegó sin un número de impacto.
+
+Aprendimos algo pequeño y útil: cuando alguien pide quitar algo, pedirle también una estimación. No para bloquear la conversación, sino para que avance.
+
+La próxima ventana la abrimos con el índice fuera y dos horas de colchón. Si vuelve a fallar, el plan B es posponer el despliegue al martes.

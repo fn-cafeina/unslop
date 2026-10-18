@@ -1,0 +1,13 @@
+Todo equipo que adopta integración continua comete los mismos errores al principio. Este artículo repasa los cinco más frecuentes y cómo evitarlos. Las pruebas, la velocidad y la confianza aparecen en todos ellos.
+
+En primer lugar, las pruebas tardan demasiado. Una suite de veinte minutos deja de ejecutarse en cada cambio.
+
+En segundo lugar, la velocidad se confunde con prisa. Desplegar diez veces al día sin pruebas no es madurez.
+
+En tercer lugar, la confianza se delega en la herramienta. La integración continua no sustituye la revisión de código.
+
+Además, los entornos de prueba se separan de producción. Las diferencias aparecen el día del despliegue.
+
+Por último, nadie mide el tiempo hasta la recuperación. Sin esa métrica, la mejora es una opinión.
+
+En resumen, los cinco errores comparten una causa: la prisa por automatizar antes de entender. Las pruebas, la velocidad y la confianza se construyen en ese orden. La integración continua premia a los equipos que respetan ese orden.

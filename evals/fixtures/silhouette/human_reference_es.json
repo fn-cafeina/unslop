@@ -1,0 +1,60 @@
+{
+  "description": "Human reference distribution for scripts/silhouette_scan.py (Spanish corpus). Regenerate with: python3 evals/check_silhouette.py --lang es --reference --write. median/iqr/n are derived from the sources below; fence and weight are research-validated constants (scratchpad/research/silhouette.md). The scorer scales each metric by max(iqr, fence): the sample IQR is degenerate at zero for these one-sided tells, so the fence is the effective scale.",
+  "penalty_threshold": 1.0,
+  "iqr_floor": 0.05,
+  "sources": [
+    "evals/fixtures/silhouette/corpus/human_es/01_linkedin.txt",
+    "evals/fixtures/silhouette/corpus/human_es/02_blog_intro.txt",
+    "evals/fixtures/silhouette/corpus/human_es/03_howto.txt",
+    "evals/fixtures/silhouette/corpus/human_es/04_ensayo.txt",
+    "evals/fixtures/silhouette/corpus/human_es/05_readme.txt",
+    "evals/fixtures/silhouette/corpus/human_es/06_email.txt",
+    "evals/fixtures/silhouette/corpus/human_es/07_historia_personal.txt",
+    "evals/fixtures/silhouette/corpus/human_es/08_explicador_tecnico.txt",
+    "evals/fixtures/silhouette/corpus/human_es/09_manual.md"
+  ],
+  "metric_order": [
+    "scaffold_opener_share",
+    "role_entropy_bits",
+    "heading_preview",
+    "preview_fulfillment",
+    "callback_content"
+  ],
+  "metrics": {
+    "scaffold_opener_share": {
+      "median": 0.0,
+      "iqr": 0.05,
+      "fence": 0.2,
+      "weight": 2.0,
+      "n": 9
+    },
+    "role_entropy_bits": {
+      "median": -0.0,
+      "iqr": 0.05,
+      "fence": 0.8,
+      "weight": 1.0,
+      "n": 9
+    },
+    "heading_preview": {
+      "median": 0.0,
+      "iqr": 0.05,
+      "fence": 0.2,
+      "weight": 1.0,
+      "n": 1
+    },
+    "preview_fulfillment": {
+      "median": 0.0,
+      "iqr": 0.05,
+      "fence": 0.55,
+      "weight": 1.0,
+      "n": 9
+    },
+    "callback_content": {
+      "median": 0.0,
+      "iqr": 0.167,
+      "fence": 0.55,
+      "weight": 1.5,
+      "n": 9
+    }
+  }
+}
