@@ -18,6 +18,7 @@ from _lang import (  # noqa: E402
     ENGLISH_FUNCTION_WORDS,
     english_function_share,
     is_probably_english,
+    detect_language,
     paragraphs as _prose_paragraphs,
     words,
 )
@@ -71,6 +72,98 @@ CODA_START_RE = re.compile(
 BOLD_COLON_RE = re.compile(r"^\s*[-*+]?\s*\*\*[^*]{1,40}\*\*\s*:", re.M)
 
 
+# --- Spanish lexicon ---------------------------------------------------------
+# Same metrics, Spanish word lists. The geometry (thresholds, floors, sweeps)
+# is language-neutral and stays exactly as it is; only the vocabulary moves.
+STOPWORDS_ES = {
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "que",
+    "y", "o", "u", "en", "a", "al", "con", "sin", "por", "para", "sobre",
+    "entre", "es", "son", "era", "eran", "fue", "ser", "está", "están",
+    "estar", "hay", "ha", "han", "se", "su", "sus", "lo", "le", "les", "me",
+    "te", "nos", "os", "mi", "tu", "más", "pero", "porque", "como", "cuando",
+    "donde", "si", "no", "ni", "también", "muy", "todo", "todos", "toda",
+    "todas", "otro", "otra", "mismo", "misma", "cada", "ambos", "este",
+    "esta", "estos", "estas", "ese", "esa", "esos", "esas", "aquel", "esto",
+    "eso", "algo", "alguien", "nada", "nadie", "ya", "aún", "todavía", "tan",
+    "tanto", "poco", "casi", "solo", "solamente", "siempre", "nunca", "ahora",
+    "antes", "después", "luego", "entonces", "así", "además", "incluso",
+    "aquí", "allí", "ahí", "hoy", "ayer", "mañana",
+}
+
+CONNECTIVE_OPENERS_ES = re.compile(
+    r"^(además|asimismo|por otro lado|sin embargo|no obstante|en consecuencia|"
+    r"por lo tanto|de hecho|en cambio|por su parte)\b",
+    re.I,
+)
+# Spanish "Cada <sustantivo> <verbo>" template opener. Fires only at 2+ such
+# paragraph openers, same as the English table.
+EVERY_OPENER_RE_ES = re.compile(
+    r"^cada\s+[a-záéíóúñ][\w'-]*\s+(?:es|son|era|eran|fue|fueron|está|están|"
+    r"tiene|tienen|debe|deben|puede|pueden|hace|hacen|necesita|necesitan|"
+    r"importa|importan|cuenta|cuentan|merece|merecen|[a-záéíóúñ]+(?:a|e|ió|ó|an|en))\b",
+    re.I,
+)
+SIGNPOST_RE_ES = re.compile(
+    r"\b(primero,|en primer lugar,|a continuación,|en (?:esta|la siguiente|"
+    r"la próxima) (?:sección|parte)|como (?:se )?(?:mencionó|vimos|dije) "
+    r"(?:anteriormente|antes|arriba)|pasemos a|veamos ahora)\b",
+    re.I,
+)
+CLOSER_RE_ES = re.compile(
+    r",\s+(?:destacando|reflejando|permitiendo|asegurando|garantizando|"
+    r"contribuyendo a|subrayando|impulsando|fomentando|reforzando|demostrando|"
+    r"mostrando|marcando|consolidando|evidenciando|sugiriendo|indicando|"
+    r"reduciendo|mejorando|optimizando)\b[^.!?]*[.!?\"]?$",
+    re.I,
+)
+CODA_START_RE_ES = re.compile(
+    r"^(en última instancia,|al final del día,|en conclusión|en definitiva,|"
+    r"en resumen,|como hemos visto|recordemos que|solo el tiempo lo dirá|"
+    r"el futuro\b)",
+    re.I,
+)
+
+TRIAD_RE = re.compile(
+    r"\b[A-Za-z][A-Za-z-]+,\s+[A-Za-z][A-Za-z-]+,\s+and\s+[A-Za-z][A-Za-z-]+\b"
+)
+TRIAD_RE_ES = re.compile(
+    r"\b[A-Za-zÁÉÍÓÚÑÜ][A-Za-zÁÉÍÓÚÑÜáéíóúñü-]+,\s+[A-Za-zÁÉÍÓÚÑÜ][A-Za-zÁÉÍÓÚÑÜáéíóúñü-]+,\s+y\s+"
+    r"[A-Za-zÁÉÍÓÚÑÜ][A-Za-zÁÉÍÓÚÑÜáéíóúñü-]+\b"
+)
+
+ENUMERATION = {
+    "the", "a", "an", "section", "chapter", "figure", "table", "step", "part",
+    "appendix",
+}
+ENUMERATION_ES = {
+    "el", "la", "los", "las", "un", "una", "sección", "capítulo", "figura",
+    "tabla", "paso", "parte", "anexo",
+}
+
+LEXICONS = {
+    "en": {
+        "stopwords": STOPWORDS,
+        "connective_openers": CONNECTIVE_OPENERS,
+        "every_opener": EVERY_OPENER_RE,
+        "signpost": SIGNPOST_RE,
+        "closer": CLOSER_RE,
+        "coda": CODA_START_RE,
+        "triad": TRIAD_RE,
+        "enumeration": ENUMERATION,
+    },
+    "es": {
+        "stopwords": STOPWORDS_ES,
+        "connective_openers": CONNECTIVE_OPENERS_ES,
+        "every_opener": EVERY_OPENER_RE_ES,
+        "signpost": SIGNPOST_RE_ES,
+        "closer": CLOSER_RE_ES,
+        "coda": CODA_START_RE_ES,
+        "triad": TRIAD_RE_ES,
+        "enumeration": ENUMERATION_ES,
+    },
+}
+
+
 def prose_paragraphs(text: str) -> list[str]:
     return _prose_paragraphs(text, blank_blockquotes=True)
 
@@ -84,13 +177,14 @@ def cv(values: list[int]) -> float:
     return math.sqrt(sum((v - mean) ** 2 for v in values) / len(values)) / mean
 
 
-def content_bigrams(text: str) -> set[tuple[str, str]]:
-    toks = [w for w in words(text) if len(w) > 3 and w not in STOPWORDS]
+def content_bigrams(text: str, stopwords: set[str] | None = None) -> set[tuple[str, str]]:
+    stopwords = STOPWORDS if stopwords is None else stopwords
+    toks = [w for w in words(text) if len(w) > 3 and w not in stopwords]
     return set(zip(toks, toks[1:]))
 
 
-def triad_count(text: str) -> int:
-    return len(re.findall(r"\b[A-Za-z][A-Za-z-]+,\s+[A-Za-z][A-Za-z-]+,\s+and\s+[A-Za-z][A-Za-z-]+\b", text))
+def triad_count(text: str, pattern: re.Pattern[str] | None = None) -> int:
+    return len((pattern or TRIAD_RE).findall(text))
 
 
 def flag(metric: str, value: float | int, threshold: str, detail: str, suggestion: str) -> dict:
@@ -113,10 +207,15 @@ GENRE_SUPPRESSIONS = {
 }
 
 
-def scan(text: str, genre: str = "prose") -> dict:
+def scan(text: str, genre: str = "prose", lang: str | None = None) -> dict:
+    if lang is None:
+        lang = detect_language(text)
+    # Unsupported languages fall back to the English lexicon (the historical
+    # default); the CLI declines them only when nothing flagged.
+    lexicon = LEXICONS["es"] if lang == "es" else LEXICONS["en"]
     paragraphs = prose_paragraphs(text)
     prose_text = "\n\n".join(paragraphs)
-    sentences = split_sentences(prose_text)
+    sentences = split_sentences(prose_text, lang)
     sentence_lengths = [len(words(s)) for s in sentences]
     prose_words = words(prose_text)
     para_lengths = [len(words(p)) for p in paragraphs]
@@ -125,7 +224,7 @@ def scan(text: str, genre: str = "prose") -> dict:
         "summary_sandwich": 0.0,
         "paragraph_cv": round(cv(para_lengths), 3),
         "sentence_mean_len": round(sum(sentence_lengths) / len(sentence_lengths), 1) if sentence_lengths else 0,
-        "triad_density": round((triad_count(prose_text) / len(prose_words) * 1000), 3) if prose_words else 0,
+        "triad_density": round((triad_count(prose_text, lexicon["triad"]) / len(prose_words) * 1000), 3) if prose_words else 0,
         "em_dash_per_1k": round((text.count("—") / len(prose_words) * 1000), 3) if prose_words else 0,
         "bold_colon_listicle_count": len(BOLD_COLON_RE.findall(text)),
         "one_line_staccato_share": 0.0,
@@ -141,8 +240,8 @@ def scan(text: str, genre: str = "prose") -> dict:
     flags = []
 
     if len(paragraphs) >= 2:
-        first = content_bigrams(paragraphs[0])
-        last = content_bigrams(paragraphs[-1])
+        first = content_bigrams(paragraphs[0], lexicon["stopwords"])
+        last = content_bigrams(paragraphs[-1], lexicon["stopwords"])
         union = first | last
         metrics["summary_sandwich"] = round(len(first & last) / len(union), 3) if union else 0.0
 
@@ -156,9 +255,9 @@ def scan(text: str, genre: str = "prose") -> dict:
         ))
 
     if len(paragraphs) >= 3:
-        coda = bool(CODA_START_RE.search(paragraphs[-1]))
+        coda = bool(lexicon["coda"].search(paragraphs[-1]))
         if not coda:
-            coda = len(content_bigrams(paragraphs[0]) & content_bigrams(paragraphs[-1])) >= 2
+            coda = len(content_bigrams(paragraphs[0], lexicon["stopwords"]) & content_bigrams(paragraphs[-1], lexicon["stopwords"])) >= 2
         metrics["conclusion_coda"] = coda
         if coda:
             flags.append(flag(
@@ -182,7 +281,7 @@ def scan(text: str, genre: str = "prose") -> dict:
     if paragraphs:
         one_line = 0
         for p in paragraphs:
-            ps = split_sentences(p)
+            ps = split_sentences(p, lang)
             if len(ps) == 1 and len(words(ps[0])) < 12:
                 one_line += 1
         metrics["one_line_staccato_share"] = round(one_line / len(paragraphs), 3)
@@ -196,7 +295,7 @@ def scan(text: str, genre: str = "prose") -> dict:
                 "Merge related beats and vary paragraph length; if this is social copy, rerun with --genre social.",
             ))
 
-    connective = sum(1 for p in paragraphs if CONNECTIVE_OPENERS.search(p))
+    connective = sum(1 for p in paragraphs if lexicon["connective_openers"].search(p))
     metrics["connective_paragraph_openers"] = connective
     if connective >= 3 or (len(paragraphs) >= 8 and connective / len(paragraphs) > 0.4):
         flags.append(flag(
@@ -207,7 +306,7 @@ def scan(text: str, genre: str = "prose") -> dict:
             "Replace scaffold openers with specific topic sentences; academic prose may justify some connectors.",
         ))
 
-    every_openers = sum(1 for p in paragraphs if EVERY_OPENER_RE.search(p))
+    every_openers = sum(1 for p in paragraphs if lexicon["every_opener"].search(p))
     metrics["every_template_openers"] = every_openers
     if every_openers >= 2:
         flags.append(flag(
@@ -219,7 +318,7 @@ def scan(text: str, genre: str = "prose") -> dict:
         ))
 
     if prose_words:
-        signposts = len(SIGNPOST_RE.findall(prose_text))
+        signposts = len(lexicon["signpost"].findall(prose_text))
         metrics["signpost_density"] = round(signposts / len(prose_words) * 100, 3)
         if len(prose_words) >= 150 and metrics["signpost_density"] > 0.6:
             flags.append(flag(
@@ -237,8 +336,7 @@ def scan(text: str, genre: str = "prose") -> dict:
             if not ws:
                 continue
             openers.append(ws[0])
-        enumeration = {"the", "a", "an", "section", "chapter", "figure", "table",
-                       "step", "part", "appendix"}
+        enumeration = lexicon["enumeration"]
         counted = [o for o in openers if o not in enumeration]
         top_count = 0
         if counted:
@@ -264,7 +362,7 @@ def scan(text: str, genre: str = "prose") -> dict:
             ))
 
     if sentences:
-        closer_count = sum(1 for s in sentences if CLOSER_RE.search(s))
+        closer_count = sum(1 for s in sentences if lexicon["closer"].search(s))
         metrics["participial_closer_share"] = round(closer_count / len(sentences), 3)
         if len(sentences) >= 8 and metrics["participial_closer_share"] >= 0.15:
             flags.append(flag(
@@ -276,6 +374,7 @@ def scan(text: str, genre: str = "prose") -> dict:
             ))
 
     return {
+        "language": lang,
         "flags": flags,
         "flagged": {f["metric"]: True for f in flags},
         "metrics": metrics,
@@ -303,15 +402,16 @@ def main(argv: list[str]) -> int:
     else:
         text = sys.stdin.buffer.read().decode("utf-8", errors="replace")
 
-    # English-only graceful decline, matching banned_phrase_scan.py.
-    result = scan(text, args.genre)
+    lang = detect_language(text)
+    result = scan(text, args.genre, lang=lang)
 
-    # Function-word absence alone is not evidence of a foreign language
-    # (imperative stacks and buzzword lists are English slop with few function
-    # words). Decline only when the heuristic fails AND nothing flagged.
-    if not result.get("flags") and not is_probably_english(text):
-        print(json.dumps({"non_english": True, "violations": [], "flags": []}, indent=2))
-        print("note: input appears non-English; scanner declined (English-only).", file=sys.stderr)
+    # Language route: English and Spanish both scan; everything else declines,
+    # and only when nothing flagged (function-word absence alone is not evidence
+    # of a foreign language: imperative stacks and buzzword lists are slop with
+    # few function words).
+    if not result.get("flags") and lang == "other":
+        print(json.dumps({"non_english": True, "language": "other", "violations": [], "flags": []}, indent=2))
+        print("note: input appears to be an unsupported language; scanner declined (supported: English, Spanish).", file=sys.stderr)
         return 0
 
     print(json.dumps(result, indent=2))

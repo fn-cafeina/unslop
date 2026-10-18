@@ -20,12 +20,20 @@ import sys
 import re
 import json
 from collections import Counter
+from pathlib import Path
 from typing import TypedDict
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from _lang import detect_language  # noqa: E402
 
 
 class ReadabilityMetrics(TypedDict):
-    flesch_kincaid_grade: float
-    flesch_reading_ease: float
+    language: str
+    flesch_kincaid_grade: float | None
+    flesch_reading_ease: float | None
+    szigriszt_pazos: float | None
     sentence_count: int
     word_count: int
     avg_sentence_length: float
@@ -72,13 +80,53 @@ def count_syllables(word: str) -> int:
     return max(1, count)
 
 
-def split_sentences(text: str) -> list[str]:
-    """Split text into sentences."""
-    parts = re.split(r'([.!?]["”]?)\s+(?=["“]?[A-Z])', text)
+def count_syllables_es(word: str) -> int:
+    """Spanish syllable count.
+
+    Much more regular than English: silent h disappears, and every vowel group
+    is one syllable except at a hiatus (two strong vowels, or either vowel
+    carrying the accent that breaks the diphthong).
+    """
+    letters = "".join(ch for ch in word.lower() if ch.isalpha() and ch != "h")
+    vowels = "aeiouáéíóúü"
+    strong = "aeoáéó"
+    accented_weak = "íú"
+    syllables = 0
+    i = 0
+    while i < len(letters):
+        if letters[i] not in vowels:
+            i += 1
+            continue
+        syllables += 1
+        previous = letters[i]
+        j = i + 1
+        while j < len(letters) and letters[j] in vowels:
+            current = letters[j]
+            if (previous in strong and current in strong) or current in accented_weak or previous in accented_weak:
+                syllables += 1
+            previous = current
+            j += 1
+        i = j
+    return max(1, syllables)
+
+
+def split_sentences(text: str, lang: str = "en") -> list[str]:
+    """Split text into sentences.
+
+    The Spanish variant also accepts sentences that open on ¿ ¡ « or an
+    accented capital, which the English pattern would miss.
+    """
+    if lang == "es":
+        pattern = r'([.!?…]["”»]?)\s+(?=["“«¿¡]?[A-ZÁÉÍÓÚÑÜ])'
+        closing = r'[.!?…]["”»]?$'
+    else:
+        pattern = r'([.!?]["”]?)\s+(?=["“]?[A-Z])'
+        closing = r'[.!?]["”]?$'
+    parts = re.split(pattern, text)
     sentences = []
     current = ""
     for part in parts:
-        if re.match(r'[.!?]["”]?$', part):
+        if re.match(closing, part):
             current += part
             sentences.append(current.strip())
             current = ""
@@ -104,16 +152,26 @@ def split_words(text: str) -> list[str]:
     return [w for w in words if w]
 
 
-def calculate_metrics(text: str) -> ReadabilityMetrics:
-    """Calculate all readability metrics."""
-    sentences = split_sentences(text)
+def calculate_metrics(text: str, lang: str | None = None) -> ReadabilityMetrics:
+    """Calculate all readability metrics.
+
+    The rhythm metrics (variance, runs, repetition, staccato) are
+    language-neutral. The readability index is not: English gets
+    Flesch-Kincaid, Spanish gets Szigriszt-Pazos (INFLESZ), and an unsupported
+    language gets no index at all rather than a meaningless English one.
+    """
+    if lang is None:
+        lang = detect_language(text)
+    sentences = split_sentences(text, lang)
     words = split_words(text)
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
 
     if not sentences or not words:
         return {
-            "flesch_kincaid_grade": 0,
-            "flesch_reading_ease": 0,
+            "language": lang,
+            "flesch_kincaid_grade": None,
+            "flesch_reading_ease": None,
+            "szigriszt_pazos": None,
             "sentence_count": 0,
             "word_count": 0,
             "avg_sentence_length": 0,
@@ -131,7 +189,8 @@ def calculate_metrics(text: str) -> ReadabilityMetrics:
     # Basic counts
     sentence_count = len(sentences)
     word_count = len(words)
-    syllable_count = sum(count_syllables(w) for w in words)
+    syllable_counter = count_syllables_es if lang == "es" else count_syllables
+    syllable_count = sum(syllable_counter(w) for w in words)
 
     # Sentence lengths
     sentence_lengths = [len(split_words(s)) for s in sentences]
@@ -167,20 +226,32 @@ def calculate_metrics(text: str) -> ReadabilityMetrics:
         else:
             staccato_run = 0
 
-    # Flesch-Kincaid calculations
+    # Readability index. English: Flesch reading ease + Flesch-Kincaid grade.
+    # Spanish: Szigriszt-Pazos (INFLESZ), 206.84 - 0.60*P - 1.02*F, with P =
+    # syllables per 100 words and F = sentences per 100 words. Unsupported
+    # languages get neither.
     avg_syllables_per_word = syllable_count / word_count if word_count else 0
 
-    flesch_reading_ease = (
-        206.835
-        - (1.015 * avg_sentence_length)
-        - (84.6 * avg_syllables_per_word)
-    )
-
-    flesch_kincaid_grade = (
-        (0.39 * avg_sentence_length)
-        + (11.8 * avg_syllables_per_word)
-        - 15.59
-    )
+    flesch_reading_ease = None
+    flesch_kincaid_grade = None
+    szigriszt_pazos = None
+    if lang == "en":
+        flesch_reading_ease = (
+            206.835
+            - (1.015 * avg_sentence_length)
+            - (84.6 * avg_syllables_per_word)
+        )
+        flesch_kincaid_grade = (
+            (0.39 * avg_sentence_length)
+            + (11.8 * avg_syllables_per_word)
+            - 15.59
+        )
+    elif lang == "es":
+        szigriszt_pazos = (
+            206.84
+            - (0.60 * avg_syllables_per_word * 100)
+            - (1.02 * (sentence_count / word_count * 100))
+        )
 
     # Word repetition (excluding common words)
     stop_words = {
@@ -190,7 +261,14 @@ def calculate_metrics(text: str) -> ReadabilityMetrics:
         'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
         'it', 'its', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
         'we', 'they', 'what', 'which', 'who', 'when', 'where', 'why', 'how',
-        'not', 'no', 'yes', 'if', 'then', 'else', 'so', 'as', 'than', 'just'
+        'not', 'no', 'yes', 'if', 'then', 'else', 'so', 'as', 'than', 'just',
+        'el', 'la', 'los', 'las', 'un', 'una', 'de', 'del', 'que', 'y', 'o',
+        'en', 'a', 'al', 'con', 'sin', 'por', 'para', 'sobre', 'entre', 'es',
+        'son', 'se', 'su', 'sus', 'lo', 'le', 'les', 'me', 'te', 'nos', 'mi',
+        'más', 'pero', 'como', 'cuando', 'si', 'no', 'ni', 'también', 'muy',
+        'todo', 'todos', 'esta', 'este', 'estos', 'estas', 'ese', 'esa', 'ya',
+        'tan', 'solo', 'siempre', 'nunca', 'ahora', 'antes', 'después', 'así',
+        'aquí', 'allí', 'hay', 'ha', 'han', 'era', 'fue', 'ser', 'está'
     }
 
     content_words = [w for w in words if w not in stop_words and len(w) > 2]
@@ -212,8 +290,13 @@ def calculate_metrics(text: str) -> ReadabilityMetrics:
     # Generate flags
     flags: list[str] = []
 
-    if flesch_kincaid_grade > 12:
+    if flesch_kincaid_grade is not None and flesch_kincaid_grade > 12:
         flags.append(f"High reading level ({flesch_kincaid_grade:.1f} grade)")
+
+    # INFLESZ bands run from >80 (muy fácil) to <35 (muy difícil); flag only the
+    # genuinely dense end so a normal Spanish op-ed stays advisory-free.
+    if szigriszt_pazos is not None and szigriszt_pazos < 40:
+        flags.append(f"Difficult reading level (INFLESZ {szigriszt_pazos:.1f})")
 
     if variance < 10 and sentence_count > 3:
         flags.append("Low sentence length variance (monotonous rhythm)")
@@ -241,8 +324,16 @@ def calculate_metrics(text: str) -> ReadabilityMetrics:
         flags.append("Sentences all similar length (AI tell)")
 
     return {
-        "flesch_kincaid_grade": round(flesch_kincaid_grade, 1),
-        "flesch_reading_ease": round(flesch_reading_ease, 1),
+        "language": lang,
+        "flesch_kincaid_grade": (
+            round(flesch_kincaid_grade, 1) if flesch_kincaid_grade is not None else None
+        ),
+        "flesch_reading_ease": (
+            round(flesch_reading_ease, 1) if flesch_reading_ease is not None else None
+        ),
+        "szigriszt_pazos": (
+            round(szigriszt_pazos, 1) if szigriszt_pazos is not None else None
+        ),
         "sentence_count": sentence_count,
         "word_count": word_count,
         "avg_sentence_length": round(avg_sentence_length, 1),

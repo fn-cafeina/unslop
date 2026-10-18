@@ -1,7 +1,7 @@
 {
   "schema": "unslop-maintenance-contract-v1",
   "version": 1,
-  "exact_total": 16,
+  "exact_total": 17,
   "examples": [
     {
       "id": "AS-03",
@@ -266,33 +266,6 @@
       ]
     },
     {
-      "id": "LANG-01b",
-      "category": "language_decline",
-      "title": "Spanish paragraph declined by structure_scan",
-      "target": "script",
-      "command": [
-        "python3",
-        "scripts/structure_scan.py"
-      ],
-      "stdin": "El rapido zorro marron salta sobre el perro perezoso. La casa esta cerca del rio y los ninos juegan en el jardin todas las tardes despues de la escuela.",
-      "failure_mode": "Structure metrics are meaningless on non-English prose but would still be reported.",
-      "correct_behavior": "Non-English detected: non_english true, zero violations, exit 0.",
-      "assertions": [
-        {
-          "type": "exit_code",
-          "equals": 0
-        },
-        {
-          "type": "stdout_contains",
-          "value": "\"non_english\": true"
-        },
-        {
-          "type": "stdout_contains",
-          "value": "\"violations\": []"
-        }
-      ]
-    },
-    {
       "id": "PACKS-01",
       "category": "tooling",
       "title": "Detector pack manifest maps exactly the scanner's categories",
@@ -359,6 +332,60 @@
           "type": "json",
           "path": "flagged",
           "equals": {}
+        }
+      ]
+    },
+    {
+      "id": "LANG-ES-01",
+      "category": "language_support",
+      "title": "Spanish paragraph is scanned by structure_scan, not declined",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/structure_scan.py"
+      ],
+      "stdin": "El rápido zorro marrón salta sobre el perro perezoso. La casa está cerca del río y los niños juegan en el jardín todas las tardes después de la escuela.",
+      "failure_mode": "Spanish is a supported language; declining it would silently skip the product's whole validation battery.",
+      "correct_behavior": "language es, zero violations, exit 0.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "stdout_not_contains",
+          "value": "non_english"
+        }
+      ]
+    },
+    {
+      "id": "LANG-OTHER-02",
+      "category": "language_decline",
+      "title": "French is declined by structure_scan",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/structure_scan.py"
+      ],
+      "stdin": "La question n'est pas seulement une question de temps, mais aussi de clarté du propos. Le rapport est à propos du projet de réforme.",
+      "failure_mode": "Structure metrics are meaningless on unsupported prose but would still be reported.",
+      "correct_behavior": "Unsupported language detected: non_english true, language other, exit 0.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"non_english\": true"
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"other\""
         }
       ]
     },
