@@ -6,6 +6,39 @@ is dated to when the decision was made (not when it was copied here), and
 cites the doc or commit that carries it. New decisions get a new entry at
 decision time; nothing here is retroactively rewritten.
 
+## 2026-10-18 — Spanish support at parity, with a bilingual eval ceiling
+
+**Decision:** Spanish joins English as a supported language at full parity: the
+same three scanners, the same category taxonomy, the same preservation and
+validation battery, the same teach/mimic voice pipeline, and the input
+language always becomes the output language. The graceful decline now means
+"unsupported language" (Portuguese, French, German, and everything else) and
+keeps the scan-first rule: decline only when the scan found nothing.
+
+**Why:** The 2026-07-06 entry set the revisit condition — "demand for another
+language's AI-isms catalog appears and someone proposes a scanner strategy for
+it" — and that is now the case. The strategy is a language route in
+`scripts/_lang.py` plus a data-only Spanish pack (`scripts/patterns_es.py`)
+that reuses the shared machinery, the shared categories, and the shared
+contract. Duplicating scanners or forking the taxonomy was rejected: coverage,
+protections, packs, and the blocking list all key off category names.
+
+**Cost accepted:** the deterministic eval ceiling moves from 80/400 to 140/560
+executable examples and expanded outcome predicates. English keeps its original
+allowance and the Spanish pack lands on top of it; the alternative was
+retiring English coverage, which the eval-first rule forbids. Spanish
+silhouette fences were revalidated on the authored Spanish corpus (see
+`evals/check_silhouette.py`, `RESEARCH_FENCE_ES`), and touching the validation
+stack invalidates the pinned v9 acceptance artifacts until the live Luna/Sol
+matrix is re-run.
+
+**Revisit-when:** A third language's catalog is proposed (the same route
+extends, but the ceiling needs a third allowance), or corpus evidence shows the
+Spanish detectors misfiring on domain prose.
+
+**Source:** `docs/PRODUCT.md` (Bounds), `references/taboo-phrases-es.md`,
+`scripts/patterns_es.py`, `evals/fixtures/contracts/scanner-examples.json`.
+
 ## 2026-07-06 — Agent-invoked only, no daemons or hooks
 
 **Decision:** Linting and refresh run when a host agent invokes them.

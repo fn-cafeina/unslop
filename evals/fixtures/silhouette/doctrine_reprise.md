@@ -35,8 +35,8 @@ the scanner would flag, so: a failure, period. The gates apply to this document 
 
 - Refuse almost nothing. The tool removes AI-isms; it is not a taste arbiter. Literary
   prose is in bounds. Long documents are in bounds via chunking.
-- English only. Non-English input gets a cheap detection and a clear decline — the one
-  graceful refusal in the product.
+- English and Spanish, with the input's language as the output's language. Anything else
+  gets a cheap detection and a clear decline — the one graceful refusal in the product.
 - Mimicry accepts any writing style the user supplies samples for. There is no rights or
   attestation machinery; the sheet of samples is the only credential.
 
