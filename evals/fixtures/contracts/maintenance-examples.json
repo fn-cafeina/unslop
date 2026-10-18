@@ -1,7 +1,7 @@
 {
   "schema": "unslop-maintenance-contract-v1",
   "version": 1,
-  "exact_total": 11,
+  "exact_total": 12,
   "examples": [
     {
       "id": "AS-03",
@@ -177,6 +177,28 @@
         {
           "type": "stdout_contains",
           "value": "\"violations\": []"
+        }
+      ]
+    },
+    {
+      "id": "PACKS-01",
+      "category": "tooling",
+      "title": "Detector pack manifest maps exactly the scanner's categories",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/check_packs.py"
+      ],
+      "failure_mode": "A stale manifest (categories the compact scanner no longer emits) leaves the agent-facing packs pointing at rules that do not exist.",
+      "correct_behavior": "Every emitted category is mapped once and every mapped category exists.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "pack integrity ok"
         }
       ]
     },
