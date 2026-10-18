@@ -30,8 +30,20 @@ sys.path.insert(0, str(HERE))
 
 from _lang import (  # noqa: E402
     ENGLISH_FUNCTION_WORDS,
+    MIN_LANGUAGE_TOKENS,
     english_function_share,
     is_probably_english,
+    detect_language,
+    word_token_count,
+)
+from patterns_es import (  # noqa: E402
+    BANNED_PHRASES_ES,
+    STRUCTURAL_PATTERNS_ES,
+    LEGAL_CONTEXT_ES,
+    HISTORICAL_CONTEXT_ES,
+    PROMOTIONAL_CONTEXT_ES,
+    SOURCE_CONTEXT_ES,
+    MEDICAL_CONTEXT_ES,
 )
 
 
@@ -74,9 +86,15 @@ def mask_ignored_spans(text: str, include_quoted: bool = False) -> str:
     return masked
 
 
+# Letters that extend the ASCII word class for boundary purposes. Spanish
+# accents and ñ are word characters: without them "más" would sit inside a
+# boundary gap and "sinergia" would match inside "sinérgica"-style neighbors.
+_WORD_CHAR = "a-z0-9_-áéíóúüñ"
+
+
 def _phrase_pattern(phrase: str) -> re.Pattern[str]:
-    left = r"(?<![a-z0-9_-])" if phrase[0].isalnum() else ""
-    right = r"(?![a-z0-9_-])" if phrase[-1].isalnum() else ""
+    left = r"(?<![%s])" % _WORD_CHAR if phrase[0].isalnum() else ""
+    right = r"(?![%s])" % _WORD_CHAR if phrase[-1].isalnum() else ""
     return re.compile(left + re.escape(phrase) + right)
 
 
@@ -570,29 +588,90 @@ def _suppress_contextual_match(
         # Scientific and medical prose often needs this precise causal wording.
         return _context_has(_MEDICAL_CONTEXT, scan_text, start, end)
 
+    # --- Spanish pack --------------------------------------------------------
+    if phrase == "un rico patrimonio cultural":
+        # Same split as English: real heritage description, not brochure copy.
+        sentence = _sentence_context(scan_text, start, end)
+        return bool(
+            re.search(HISTORICAL_CONTEXT_ES, sentence, re.IGNORECASE)
+            and not re.search(PROMOTIONAL_CONTEXT_ES, sentence, re.IGNORECASE)
+        )
+
+    if phrase == "un testimonio de":
+        # "Testimonio" is a certified copy in legal Spanish and an artifact in
+        # historical prose; the inflated "a testament to" sense is neither.
+        sentence = _sentence_context(scan_text, start, end)
+        return bool(
+            re.search(LEGAL_CONTEXT_ES, sentence, re.IGNORECASE)
+            or re.search(HISTORICAL_CONTEXT_ES, sentence, re.IGNORECASE)
+        )
+
+    if phrase in {"los estudios demuestran", "diversos estudios sugieren", "los analistas predicen"}:
+        # Keep unattributed claims flagged; a named study or source is reporting.
+        return bool(
+            re.search(SOURCE_CONTEXT_ES, _sentence_context(scan_text, start, end), re.IGNORECASE)
+        )
+
+    if phrase in {"sinergia", "sinergias"}:
+        # Cost synergies are standard M&A language, not business jargon inflation.
+        return _context_has(
+            r"\b(?:fusi[óo]n|adquisici[óo]n|costes?|costos?|integraci[óo]n|acuerdo|"
+            r"convenio|due\s+diligence)\b",
+            scan_text,
+            start,
+            end,
+        )
+
+    if phrase == "robusto":
+        # Engineering prose names the thing it holds up.
+        head = scan_text[max(0, start - 60):start]
+        return bool(
+            re.search(
+                r"\b(?:sistema|c[óo]digo|motor|algoritmo|protocolo|infraestructura|backend|"
+                r"servidor|cliente|proceso|pruebas?|suite|cifrado|verificaci[óo]n|cola|api)\b"
+                r"[\w\s]{0,30}$",
+                head,
+                re.IGNORECASE,
+            )
+        )
+
+    if category in {"conclusion_scaffold", "negative_parallelism"} and re.search(
+        LEGAL_CONTEXT_ES, _sentence_context(scan_text, start, end), re.IGNORECASE
+    ):
+        # Spanish legal drafting uses these connectors as precise structure
+        # ("no solo ... sino también" for scope, "en conclusión" for the ruling).
+        if category == "conclusion_scaffold":
+            return True
+        return scan_text[start:end].lower().startswith("no solo")
+
+    if category == "significance_inflation" and re.match(
+        r"(?:juega|desempeña)\s+un\s+papel\b", scan_text[start:end], re.IGNORECASE
+    ):
+        # Clinical and scientific prose uses this causal phrasing precisely.
+        return _context_has(MEDICAL_CONTEXT_ES, scan_text, start, end)
+
     return False
 
 
-def scan_for_violations(text: str, include_quoted: bool = False) -> list[Violation]:
-    """Scan text for banned phrases and structural patterns."""
-    violations: list[Violation] = []
-    spans: list[tuple[int, int]] = []
-    scan_text = mask_ignored_spans(text, include_quoted=include_quoted)
-    # Cheap presence index: most documents contain only a few of the
-    # retained literal phrases.
-    # literal phrases. Precise matches still run against the original-width
-    # text, so Unicode case expansion cannot corrupt reported offsets.
-    # Normalize curly apostrophes only for the cheap presence check. Match
-    # against the original-width text below so reported offsets stay exact.
-    scan_text_lower = scan_text.lower().replace("’", "'")
-    line_starts = _line_starts(text)
-    line_context_cache: dict[int, str] = {}
+# One scanner, one taxonomy, one table per language. "other" deliberately scans
+# both tables: an unsupported-language verdict must never hide a real tell.
+PATTERN_TABLES: dict[str, tuple[dict, list]] = {
+    "en": (BANNED_PHRASES, STRUCTURAL_PATTERNS),
+    "es": (BANNED_PHRASES_ES, STRUCTURAL_PATTERNS_ES),
+}
 
-    # Check banned phrases. Matching runs case-insensitively directly on
-    # scan_text (original case, masking is length-preserving) instead of on a
-    # separately lowered copy, so match.start()/match.end() are valid offsets
-    # into the original text with no re-derivation needed.
-    for phrase, info in BANNED_PHRASES.items():
+
+def _scan_phrase_table(
+    phrases: dict,
+    scan_text: str,
+    scan_text_lower: str,
+    text: str,
+    line_starts: list[int],
+    context_cache: dict[int, str],
+) -> list[tuple[Violation, tuple[int, int]]]:
+    """Scan one literal-phrase table, returning (violation, span) pairs."""
+    hits: list[tuple[Violation, tuple[int, int]]] = []
+    for phrase, info in phrases.items():
         if phrase not in scan_text_lower:
             continue
         for match in _phrase_pattern_ci(phrase).finditer(scan_text):
@@ -621,24 +700,34 @@ def scan_for_violations(text: str, include_quoted: bool = False) -> list[Violati
                 )
             ):
                 continue
-            pos = match.start()
             line_num, column, context = _line_col_context(
-                text, line_starts, pos, line_context_cache
+                text, line_starts, match.start(), context_cache
             )
+            hits.append((
+                {
+                    "phrase": phrase,
+                    "category": info["category"],
+                    "severity": info.get("severity", "hard"),
+                    "line_number": line_num,
+                    "column": column,
+                    "context": context,
+                    "suggestion": info["suggestion"],
+                },
+                (match.start(), match.end()),
+            ))
+    return hits
 
-            violations.append({
-                "phrase": phrase,
-                "category": info["category"],
-                "severity": info.get("severity", "hard"),
-                "line_number": line_num,
-                "column": column,
-                "context": context,
-                "suggestion": info["suggestion"]
-            })
-            spans.append((match.start(), match.end()))
 
-    # Check structural patterns
-    for pattern_info in STRUCTURAL_PATTERNS:
+def _scan_structural_table(
+    patterns: list,
+    scan_text: str,
+    text: str,
+    line_starts: list[int],
+    context_cache: dict[int, str],
+) -> list[tuple[Violation, tuple[int, int]]]:
+    """Scan one structural-regex table, returning (violation, span) pairs."""
+    hits: list[tuple[Violation, tuple[int, int]]] = []
+    for pattern_info in patterns:
         matches = list(re.finditer(pattern_info["pattern"], scan_text, re.IGNORECASE))
         min_matches = int(pattern_info.get("min_matches", "1"))
         if len(matches) < min_matches:
@@ -652,31 +741,78 @@ def scan_for_violations(text: str, include_quoted: bool = False) -> list[Violati
                 match.end(),
             ):
                 continue
-            pos = match.start()
             line_num, column, context = _line_col_context(
-                text, line_starts, pos, line_context_cache
+                text, line_starts, match.start(), context_cache
             )
+            hits.append((
+                {
+                    # Preserve the pre-fix lowercase phrase field: STRUCTURAL_PATTERNS
+                    # regexes are lowercase literals, previously matched against a
+                    # lowered copy of the text, so match.group() was always lowercase.
+                    "phrase": match.group().lower(),
+                    "category": pattern_info["category"],
+                    "severity": pattern_info.get("severity", "hard"),
+                    "line_number": line_num,
+                    "column": column,
+                    "context": context,
+                    "suggestion": pattern_info["suggestion"],
+                },
+                (match.start(), match.end()),
+            ))
+    return hits
 
-            violations.append({
-                # Preserve the pre-fix lowercase phrase field: STRUCTURAL_PATTERNS
-                # regexes are lowercase literals, previously matched against a
-                # lowered copy of the text, so match.group() was always lowercase.
-                "phrase": match.group().lower(),
-                "category": pattern_info["category"],
-                "severity": pattern_info.get("severity", "hard"),
-                "line_number": line_num,
-                "column": column,
-                "context": context,
-                "suggestion": pattern_info["suggestion"]
-            })
-            spans.append((match.start(), match.end()))
+
+def scan_for_violations(
+    text: str, include_quoted: bool = False, lang: str | None = None
+) -> list[Violation]:
+    """Scan text for banned phrases and structural patterns.
+
+    ``lang`` picks the pattern table. ``None`` detects it. An unsupported
+    language, or a text too short to carry a language signal, scans every table
+    so real tells still surface (scan-first).
+    """
+    if lang is None:
+        lang = detect_language(text)
+    scan_every_table = lang == "other" or word_token_count(text) < MIN_LANGUAGE_TOKENS
+    tables = list(PATTERN_TABLES.values()) if scan_every_table else [PATTERN_TABLES[lang]]
+
+    violations: list[Violation] = []
+    spans: list[tuple[int, int]] = []
+    scan_text = mask_ignored_spans(text, include_quoted=include_quoted)
+    # Cheap presence index: most documents contain only a few of the
+    # retained literal phrases.
+    # Precise matches still run against the original-width text, so Unicode case
+    # expansion cannot corrupt reported offsets. Normalize curly apostrophes only
+    # for the cheap presence check.
+    scan_text_lower = scan_text.lower().replace("’", "'")
+    line_starts = _line_starts(text)
+    line_context_cache: dict[int, str] = {}
+
+    # Matching runs case-insensitively directly on scan_text (original case,
+    # masking is length-preserving) instead of on a separately lowered copy, so
+    # match.start()/match.end() are valid offsets into the original text with no
+    # re-derivation needed.
+    for phrases, structural in tables:
+        for violation, span in _scan_phrase_table(
+            phrases, scan_text, scan_text_lower, text, line_starts, line_context_cache
+        ):
+            violations.append(violation)
+            spans.append(span)
+        for violation, span in _scan_structural_table(
+            structural, scan_text, text, line_starts, line_context_cache
+        ):
+            violations.append(violation)
+            spans.append(span)
 
     # Frequency-gated structural findings (min_matches > 1) describe the DOCUMENT, not
     # a single span. A broad, unrelated match (e.g. anti_slop_register spanning several
     # short headlines) must not silently swallow every occurrence and erase the
     # document-level tell, so these categories are exempt from containment suppression.
     freq_gated = {
-        p["category"] for p in STRUCTURAL_PATTERNS if int(p.get("min_matches", "1")) > 1
+        p["category"]
+        for _, structural in tables
+        for p in structural
+        if int(p.get("min_matches", "1")) > 1
     }
 
     # Linear containment sweep, equivalent to the O(n^2) "any other strictly
@@ -749,15 +885,16 @@ def main() -> None:
         print(json.dumps({"error": "No input provided", "violations": []}))
         sys.exit(1)
 
-    violations = scan_for_violations(text, include_quoted=args.include_quoted)
+    lang = detect_language(text)
+    violations = scan_for_violations(text, include_quoted=args.include_quoted, lang=lang)
 
-    # English-only graceful decline. Function-word absence alone is not evidence
-    # of a foreign language: imperative stacks and buzzword lists are English
-    # slop with few function words. Decline only when the text both fails the
-    # function-word heuristic AND produced zero English-pattern hits.
-    if not violations and not is_probably_english(text):
-        print(json.dumps({"non_english": True, "total_violations": 0, "violations": []}, indent=2))
-        print("note: input appears non-English; scanner declined (English-only).", file=sys.stderr)
+    # Language route: English and Spanish both scan. Everything else gets the
+    # graceful decline, and only when the scan found nothing. Function-word
+    # absence alone is not evidence of a foreign language: imperative stacks and
+    # buzzword lists are slop with few function words.
+    if not violations and lang == "other":
+        print(json.dumps({"non_english": True, "language": "other", "total_violations": 0, "violations": []}, indent=2))
+        print("note: input appears to be an unsupported language; scanner declined (supported: English, Spanish).", file=sys.stderr)
         sys.exit(0)
 
     # Group by category for summary
@@ -768,6 +905,7 @@ def main() -> None:
         by_severity[v["severity"]] = by_severity.get(v["severity"], 0) + 1
 
     output = {
+        "language": lang,
         "total_violations": len(violations),
         "by_severity": by_severity,
         "by_category": categories,

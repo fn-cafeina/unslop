@@ -67,5 +67,25 @@
   "macro_burstiness": {
     "target": "sentence_burstiness",
     "kind": "structure"
+  },
+  "es_jargon_sinergia": {
+    "target": "jargon",
+    "kind": "phrase"
+  },
+  "es_legal_no_solo": {
+    "target": "negative_parallelism",
+    "kind": "phrase"
+  },
+  "es_significance_papel": {
+    "target": "significance_inflation",
+    "kind": "phrase"
+  },
+  "es_patrimonio": {
+    "target": "promotional",
+    "kind": "phrase"
+  },
+  "es_robusto": {
+    "target": "jargon",
+    "kind": "phrase"
   }
 }

@@ -18,8 +18,8 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "evals"))
 
 from run_adversarial import check_assertion  # noqa: E402
+from scripts._lang import detect_language  # noqa: E402
 from scripts.banned_phrase_scan import (  # noqa: E402
-    is_probably_english,
     scan_for_violations,
 )
 
@@ -32,13 +32,17 @@ def _scanner_result(text: str) -> SimpleNamespace:
         payload = {"error": "No input provided", "violations": []}
         return SimpleNamespace(returncode=1, stdout=json.dumps(payload) + "\n", stderr="")
 
-    violations = scan_for_violations(text)
-    if not violations and not is_probably_english(text):
-        payload = {"non_english": True, "total_violations": 0, "violations": []}
+    lang = detect_language(text)
+    violations = scan_for_violations(text, lang=lang)
+    if not violations and lang == "other":
+        payload = {"non_english": True, "language": "other", "total_violations": 0, "violations": []}
         return SimpleNamespace(
             returncode=0,
             stdout=json.dumps(payload, indent=2) + "\n",
-            stderr="note: input appears non-English; scanner declined (English-only).\n",
+            stderr=(
+                "note: input appears to be an unsupported language; scanner declined "
+                "(supported: English, Spanish).\n"
+            ),
         )
 
     categories: dict[str, int] = {}
@@ -49,6 +53,7 @@ def _scanner_result(text: str) -> SimpleNamespace:
         categories[category] = categories.get(category, 0) + 1
         by_severity[severity] = by_severity.get(severity, 0) + 1
     payload = {
+        "language": lang,
         "total_violations": len(violations),
         "by_severity": by_severity,
         "by_category": categories,

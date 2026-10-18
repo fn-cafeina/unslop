@@ -29,7 +29,21 @@ from _check_support import ROOT, load_contract_examples, load_evals  # noqa: E40
 
 sys.path.insert(0, str(ROOT))
 
-from scripts.banned_phrase_scan import BANNED_PHRASES, STRUCTURAL_PATTERNS  # noqa: E402
+from scripts.banned_phrase_scan import (  # noqa: E402
+    BANNED_PHRASES,
+    BANNED_PHRASES_ES,
+    STRUCTURAL_PATTERNS,
+    STRUCTURAL_PATTERNS_ES,
+)
+
+
+# Every language table is gated the same way. A new pack that skips the gate
+# would be the exact "lands with zero eval coverage" failure this check exists
+# to prevent.
+TABLES = (
+    ("en", BANNED_PHRASES, STRUCTURAL_PATTERNS),
+    ("es", BANNED_PHRASES_ES, STRUCTURAL_PATTERNS_ES),
+)
 
 
 def load_corpus(evals):
@@ -66,40 +80,41 @@ def load_corpus(evals):
 
 
 def check_coverage(corpus):
-    """Return (ok, lines) for pattern/phrase coverage."""
+    """Return (ok, lines) for pattern/phrase coverage across every language table."""
     lines = []
     ok = True
 
-    # Structural patterns: compile once, match against the lowercased corpus.
-    struct_uncovered = []
-    struct_covered = 0
-    for pat in STRUCTURAL_PATTERNS:
-        regex = re.compile(pat["pattern"])
-        if any(regex.search(text) for _, text in corpus):
-            struct_covered += 1
-        else:
-            struct_uncovered.append(pat)
-    if struct_uncovered:
-        ok = False
-        lines.append(f"Uncovered structural patterns ({len(struct_uncovered)}):")
-        for pat in struct_uncovered:
-            lines.append(f"  - [{pat['category']}] {pat['pattern']}")
-        lines.append("  Add a row whose stdin triggers each pattern (no grandfathering).")
+    for language, phrases, patterns in TABLES:
+        # Structural patterns: compile once, match against the lowercased corpus.
+        struct_uncovered = []
+        struct_covered = 0
+        for pat in patterns:
+            regex = re.compile(pat["pattern"])
+            if any(regex.search(text) for _, text in corpus):
+                struct_covered += 1
+            else:
+                struct_uncovered.append(pat)
+        if struct_uncovered:
+            ok = False
+            lines.append(f"[{language}] Uncovered structural patterns ({len(struct_uncovered)}):")
+            for pat in struct_uncovered:
+                lines.append(f"  - [{pat['category']}] {pat['pattern']}")
+            lines.append("  Add a row whose stdin triggers each pattern (no grandfathering).")
 
-    # Banned phrases: literal key must appear somewhere in the corpus.
-    phrase_uncovered = [k for k in BANNED_PHRASES if not any(k.lower() in text for _, text in corpus)]
-    phrase_covered = len(BANNED_PHRASES) - len(phrase_uncovered)
-    if phrase_uncovered:
-        ok = False
-        lines.append(f"Uncovered banned phrases ({len(phrase_uncovered)}):")
-        for k in phrase_uncovered:
-            lines.append(f"  - {k!r}")
-        lines.append("  Add a REC-style coverage pack that packs these into eval stdins.")
+        # Banned phrases: literal key must appear somewhere in the corpus.
+        phrase_uncovered = [k for k in phrases if not any(k.lower() in text for _, text in corpus)]
+        phrase_covered = len(phrases) - len(phrase_uncovered)
+        if phrase_uncovered:
+            ok = False
+            lines.append(f"[{language}] Uncovered banned phrases ({len(phrase_uncovered)}):")
+            for k in phrase_uncovered:
+                lines.append(f"  - {k!r}")
+            lines.append("  Add a REC-style coverage pack that packs these into eval stdins.")
 
-    lines.append(
-        f"coverage: {struct_covered}/{len(STRUCTURAL_PATTERNS)} structural patterns, "
-        f"{phrase_covered}/{len(BANNED_PHRASES)} banned phrases exercised."
-    )
+        lines.append(
+            f"[{language}] coverage: {struct_covered}/{len(patterns)} structural patterns, "
+            f"{phrase_covered}/{len(phrases)} banned phrases exercised."
+        )
     return ok, lines
 
 
@@ -107,8 +122,10 @@ def check_protections(evals):
     """Return (ok, lines) for per-category FP protection."""
     lines = []
     ok = True
-    categories = set(v["category"] for v in BANNED_PHRASES.values())
-    categories |= set(p["category"] for p in STRUCTURAL_PATTERNS)
+    categories = set()
+    for _, phrases, patterns in TABLES:
+        categories |= set(v["category"] for v in phrases.values())
+        categories |= set(p["category"] for p in patterns)
 
     claimed = {}
     for e in evals:

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "exact_total": 41,
+  "exact_total": 73,
   "examples": [
     {
       "id": "QE-04",
@@ -453,7 +453,7 @@
         },
         {
           "type": "violation_phrase_contains",
-        "value": "whether you're a beginner or"
+          "value": "whether you're a beginner or"
         }
       ]
     },
@@ -763,6 +763,649 @@
       "category": "scanner_false_positive",
       "protects": "knowledge_cutoff",
       "stdin": "As of the last inspection, the elevator passed every safety check.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-THROAT",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "La verdad es que nadie revisa el informe. Seamos claros: el proceso no está documentado.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 2
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "la verdad es que"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "seamos claros"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-THROAT2",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Seamos honestos, el equipo no da abasto y vamos a ser honestos con el alcance. Aquí está la cuestión: nadie probó la migración. Lo que nadie te cuenta es que el código es frágil. No es ningún secreto que falta personal.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 5
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "vamos a ser honestos"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "aquí está la cuestión:"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "lo que nadie te cuenta"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "no es ningún secreto que"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "throat_clearing"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-FILLER",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "En la era digital, es importante destacar que la nube cambia todo. Cabe destacar que el equipo migró en marzo. Cabe mencionar que el coste bajó. Es importante señalar que falta auditoría. En el mundo actual, hoy más que nunca, la velocidad importa.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 7
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "en la era digital"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "cabe mencionar que"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "hoy más que nunca"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-CONCLUSION",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "En conclusión, el plan funciona. En resumen, el equipo cumplió. Para resumir, bajó el coste. En definitiva, ganamos tiempo. Para concluir, hay que seguir. Como hemos visto, la ejecución importa.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 6
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "en conclusión"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "como hemos visto"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-SIGNIFICANCE",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "La migración desempeña un papel crucial. El equipo desempeña un papel fundamental. El dato desempeña un papel clave. La cultura juega un papel crucial. El diseño juega un papel fundamental. La revisión juega un papel vital. El piloto es un testimonio de nuestro compromiso. Este trimestre marca un antes y un después y deja una huella imborrable.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 9
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "desempeña un papel clave"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "juega un papel vital"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "un testimonio de"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "deja una huella imborrable"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-ATTRIBUTION",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Expertos señalan que el mercado cambia. Expertos aseguran que el precio sube. Según los expertos, la demanda crece. Los estudios demuestran que el hábito pesa. Diversos estudios sugieren que el sueño importa. Los analistas predicen una caída. Fuentes cercanas confirman la salida.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 7
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "expertos señalan"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "diversos estudios sugieren"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "vague_attribution"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-PROMOTIONAL",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "La marca presume de un rico patrimonio cultural. La cascada es el secreto mejor guardado de la comarca. El mercado viejo es una joya escondida. La ruta ofrece una experiencia inolvidable. La feria es un destino imperdible.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 5
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "un rico patrimonio cultural"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "un destino imperdible"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "promotional"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-AIVOCAB",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Sumérgete en el fascinante mundo de los datos. Desbloquea el potencial de tu equipo y aprovecha al máximo cada reunión. Desbloquear todo el potencial requiere tiempo y ambición.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 5
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "sumérgete en"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "aprovecha al máximo"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "en el fascinante mundo de"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-JARGON",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "La sinergia entre equipos mejora el resultado. Buscamos sinergias operativas. El enfoque holístico del proyecto ayuda y la mirada holística del informe también. Hay que empoderar a la plantilla.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 5
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "sinergias"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "holístico"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "empoderar"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "jargon"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-ROBUST",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "El liderazgo de Marta es robusto y su criterio resulta vibrante en cada negociación.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 2
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "robusto"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "vibrante"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-FALSE-AGENCY",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Los datos hablan por sí solos. El mercado premia la velocidad. La innovación exige valentía.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 3
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "los datos hablan por sí solos"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "false_agency"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-ASSISTANT",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "¿En qué puedo ayudarte hoy? ¿En qué más puedo ayudarte? Como modelo de lenguaje no tengo opiniones propias. Estoy aquí para ayudarte con tu borrador.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 4
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "¿en qué puedo ayudarte hoy?"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "como modelo de lenguaje"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "assistant_artifact"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-CUTOFF",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Hasta mi última actualización, la tarifa era distinta. No tengo acceso a información en tiempo real sobre el precio de hoy.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 2
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "hasta mi última actualización"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "no tengo acceso a información en tiempo real"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-RHETORICAL",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "¿Alguna vez te has preguntado por qué fallan las migraciones de datos? La respuesta está en el proceso y en la revisión previa de cada cambio.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 1
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "¿alguna vez te has preguntado"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-COPULA",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "La plataforma se erige como un referente del sector. El nuevo proceso representa un hito para la compañía. La revisión funciona como un puente entre equipos. La oficina central juega un papel central en la operación.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 4
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "copula_avoidance"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "se erige como un referente"
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "juega un papel central"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-CONTRAST",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "No solo mejora la latencia, sino también reduce el coste. No se trata de reescribir el sistema, sino de medirlo. La verdad incómoda es que nadie leyó el informe. Sin duda alguna, el proceso falla.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 4
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "negative_parallelism"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "binary_contrast"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "emphasis_crutch"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-CONTRAST2",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "El problema no es solo técnico, es cultural. La decisión no fue solo económica, fue política.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 2
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "negative_parallelism"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-REGISTER",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Sin adornos. Sin relleno. Sin promesas. Así trabaja el equipo desde marzo.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 1
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "anti_slop_register"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-READER",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Imagínate por un momento que el servidor se cae en plena campaña. Piensa por un momento en el coste de esa caída. ¿Te suena familiar?",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 3
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "reader_addressing"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-SIGNPOST",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Pasemos a la segunda parte del análisis.\nA continuación, revisamos los registros del servidor.\nComo se mencionó anteriormente, la cola creció.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 3
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "reader_addressing"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-CODA",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Recordemos que el objetivo era reducir el coste operativo.\nEn última instancia, la decisión fue correcta y el equipo lo sabía.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 2
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "conclusion_scaffold"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-LIST",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "En primer lugar, medimos la latencia. En segundo lugar, revisamos los registros. En tercer lugar, ajustamos el índice.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 3
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "numbered_list_inflation"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-MACRO-FILLER",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "En un mundo donde todo cambia, la atención es escasa. En el panorama actual, la velocidad decide. Nos encontramos ante un reto de escala desconocida.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 3
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "filler"
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "ai_vocabulary"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-HEDGE",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Podría quizá mejorar el resultado. Tal vez quizá el equipo lo revise antes del viernes.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 2
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "hedge_stack"
+        }
+      ]
+    },
+    {
+      "id": "REC-ES-ATTR-STRUCT",
+      "target": "script",
+      "category": "scanner_recall",
+      "stdin": "Según diversos expertos, la tendencia del mercado continúa al alza durante el trimestre.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "gte": 1
+        },
+        {
+          "type": "violation_category_equals",
+          "value": "vague_attribution"
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-LEGAL",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "copula_avoidance",
+      "stdin": "El artículo 12 establece que el impago constituye una infracción grave. La cláusula no solo limita la responsabilidad del arrendamiento, sino también fija el plazo de entrega. El notario guardó un testimonio de la sentencia. En conclusión, el tribunal desestimó la demanda.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-MEDICAL",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "significance_inflation",
+      "stdin": "El gen regula la inflamación y juega un papel central en la fisiología del riñón. El estudio clínico mide la dosis y el tratamiento ajusta la terapia según el síntoma.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-HISTORY",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "promotional",
+      "stdin": "El museo conserva piezas de la época y el archivo documenta un rico patrimonio cultural. El legado histórico incluye un testimonio de la restauración del siglo XVI.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-SOURCE",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "vague_attribution",
+      "stdin": "Los estudios demuestran, según el informe publicado por el Ministerio en 2024, que la demanda cae. Diversos estudios sugieren, de acuerdo con la revisión citada por el autor, un efecto leve.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-ENGINEERING",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "jargon",
+      "stdin": "El sistema de reintentos robusto mantiene la cola estable y el código es robusto tras la refactorización. El motor soporta el doble de carga sin perder verificaciones.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-FINANCE",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "jargon",
+      "stdin": "La fusión generó sinergias de costes verificables en el primer año. El equipo financiero analizó las sinergias operativas del acuerdo antes del cierre.",
+      "assertions": [
+        {
+          "type": "json",
+          "path": "total_violations",
+          "equals": 0
+        }
+      ]
+    },
+    {
+      "id": "FP-ES-DOC-SIGNPOST",
+      "target": "script",
+      "category": "scanner_false_positive",
+      "protects": "reader_addressing",
+      "stdin": "El proceso continúa a continuación con la validación manual de cada registro. Después pasamos al archivo y revisamos las firmas del lote completo.",
       "assertions": [
         {
           "type": "json",

@@ -1,7 +1,7 @@
 {
   "schema": "unslop-maintenance-contract-v1",
   "version": 1,
-  "exact_total": 12,
+  "exact_total": 16,
   "examples": [
     {
       "id": "AS-03",
@@ -150,6 +150,118 @@
           "type": "json",
           "path": "flags",
           "equals": []
+        }
+      ]
+    },
+    {
+      "id": "LANG-ES-02",
+      "category": "language_support",
+      "title": "Spanish slop is detected by banned_phrase_scan",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/banned_phrase_scan.py"
+      ],
+      "stdin": "Cabe destacar que la sinergia desempeña un papel crucial en el proceso de migración.",
+      "failure_mode": "A Spanish pack that detects nothing would look like support while delivering the decline behavior under a new name.",
+      "correct_behavior": "language es, hard findings reported, exit 1.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 1
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"es\""
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "cabe destacar que"
+        },
+        {
+          "type": "stdout_not_contains",
+          "value": "\"non_english\": true"
+        }
+      ]
+    },
+    {
+      "id": "LANG-ES-03",
+      "category": "language_support",
+      "title": "Short Spanish buzzword stacks are scanned, not declined",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/banned_phrase_scan.py"
+      ],
+      "stdin": "Sinergia. Impacto. Crecimiento. Escalabilidad.",
+      "failure_mode": "The historical decline-first bug: inputs too short to carry a language signal were waved through instead of scanned.",
+      "correct_behavior": "No language signal, so every table is scanned and the Spanish tell is reported; never declined.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 1
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "sinergia"
+        },
+        {
+          "type": "stdout_not_contains",
+          "value": "\"non_english\": true"
+        }
+      ]
+    },
+    {
+      "id": "LANG-OTHER-01",
+      "category": "language_decline",
+      "title": "Portuguese is declined by banned_phrase_scan",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/banned_phrase_scan.py"
+      ],
+      "stdin": "Não é apenas uma questão de tempo, mas também de coragem. A informação está no relatório final do projeto.",
+      "failure_mode": "Portuguese shares function words with Spanish; without the foreign-word veto it would be scanned with Spanish rules and report meaningless findings.",
+      "correct_behavior": "Unsupported language detected: non_english true, language other, exit 0.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 0
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"non_english\": true"
+        },
+        {
+          "type": "stdout_contains",
+          "value": "\"language\": \"other\""
+        }
+      ]
+    },
+    {
+      "id": "LANG-SCANFIRST-01",
+      "category": "language_decline",
+      "title": "English headline stacks are scanned, not declined",
+      "target": "script",
+      "command": [
+        "python3",
+        "scripts/banned_phrase_scan.py"
+      ],
+      "stdin": "Synergy. Scalability. Impact. Growth. Ship it. Move fast. Break things.",
+      "failure_mode": "Function-word absence alone is not evidence of a foreign language; wave-throughs here were the original decline-first bug.",
+      "correct_behavior": "Sticky English default: scanned, the jargon tell is reported, never declined.",
+      "assertions": [
+        {
+          "type": "exit_code",
+          "equals": 1
+        },
+        {
+          "type": "violation_phrase_contains",
+          "value": "synergy"
+        },
+        {
+          "type": "stdout_not_contains",
+          "value": "\"non_english\": true"
         }
       ]
     },

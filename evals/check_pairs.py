@@ -16,15 +16,17 @@ def words(p):
 def scan_banned(path):
     """In-process equivalent of banned_phrase_scan.py's CLI: (returncode, data)."""
     text = path.read_text()
-    violations = banned_phrase_scan.scan_for_violations(text)
-    if not violations and not banned_phrase_scan.is_probably_english(text):
-        return 0, {'non_english': True, 'total_violations': 0, 'violations': []}
+    lang = banned_phrase_scan.detect_language(text)
+    violations = banned_phrase_scan.scan_for_violations(text, lang=lang)
+    if not violations and lang == 'other':
+        return 0, {'non_english': True, 'language': 'other', 'total_violations': 0, 'violations': []}
     categories = {}
     by_severity = {'hard': 0, 'soft': 0}
     for v in violations:
         categories[v['category']] = categories.get(v['category'], 0) + 1
         by_severity[v['severity']] = by_severity.get(v['severity'], 0) + 1
     data = {
+        'language': lang,
         'total_violations': len(violations),
         'by_severity': by_severity,
         'by_category': categories,
@@ -36,8 +38,8 @@ def scan_structure(path):
     """In-process equivalent of structure_scan.py's CLI: (returncode, data)."""
     text = path.read_text()
     result = structure_scan.scan(text)
-    if not result.get('flags') and not structure_scan.is_probably_english(text):
-        return 0, {'non_english': True, 'violations': [], 'flags': []}
+    if not result.get('flags') and result.get('language') == 'other':
+        return 0, {'non_english': True, 'language': 'other', 'violations': [], 'flags': []}
     return (1 if result['flags'] else 0), result
 
 def main():

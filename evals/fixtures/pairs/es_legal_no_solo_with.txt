@@ -1,0 +1,1 @@
+No solo mejora la latencia del servicio, sino también reduce el coste de cada operación.
