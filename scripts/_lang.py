@@ -57,8 +57,161 @@ def is_probably_english(text: str, threshold: float = 0.10, min_tokens: int = 15
     return english_function_share(text) >= threshold
 
 
+# Spanish function words, same construction as the English table above. The list
+# is deliberately generous (articles, pronouns, prepositions, auxiliaries and
+# high-frequency adverbs) because the decision it feeds is a tri-state language
+# route, not a fine-grained classification.
+SPANISH_FUNCTION_WORDS = frozenset({
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "lo", "le", "les",
+    "me", "te", "se", "nos", "os", "su", "sus", "mi", "mis", "tu", "tus",
+    "nuestro", "nuestra", "nuestros", "nuestras", "este", "esta", "estos",
+    "estas", "ese", "esa", "esos", "esas", "aquel", "aquella", "aquellos",
+    "aquellas", "esto", "eso", "aquello", "quien", "quienes", "cual",
+    "cuales", "algo", "alguien", "nada", "nadie", "todo", "todos", "toda",
+    "todas", "otro", "otra", "otros", "otras", "mismo", "misma", "cada",
+    "ambos", "de", "del", "a", "al", "en", "con", "sin", "por", "para",
+    "sobre", "entre", "hasta", "desde", "hacia", "según", "contra", "durante",
+    "mediante", "tras", "y", "e", "o", "u", "ni", "pero", "sino", "aunque",
+    "porque", "pues", "como", "cuando", "donde", "mientras", "si", "no", "sí",
+    "ya", "aún", "todavía", "también", "tampoco", "más", "menos", "muy",
+    "tan", "tanto", "mucho", "mucha", "muchos", "muchas", "poco", "poca",
+    "pocos", "pocas", "casi", "solo", "solamente", "siempre", "nunca",
+    "jamás", "ahora", "antes", "después", "luego", "entonces", "así",
+    "además", "incluso", "quizá", "quizás", "acaso", "aquí", "allí", "ahí",
+    "allá", "hoy", "ayer", "mañana", "es", "son", "era", "eran", "fue",
+    "fueron", "ser", "está", "están", "estoy", "estamos", "estaba",
+    "estaban", "estar", "hay", "había", "hubo", "haber", "ha", "han", "he",
+    "hemos", "tiene", "tienen", "tenía", "tener", "puede", "pueden", "podía",
+    "hacer", "hace", "hacen", "hizo", "decir", "dice", "dicen", "dijo",
+    "vamos", "va", "van", "ir", "sé", "sabe", "saben", "quiere", "quieren",
+    "debe", "deben", "parece", "parecen",
+})
+
+# Function words of the languages that surround Spanish (Portuguese, French,
+# Italian, German). Spanish shares articles and prepositions with its Romance
+# neighbors, so the function-word share alone cannot separate them; these words
+# cannot appear in Spanish prose, and a couple of them settle the route.
+FOREIGN_FUNCTION_WORDS = frozenset({
+    # Portuguese
+    "não", "uma", "com", "mais", "também", "muito", "você", "são", "foi",
+    "dos", "das", "pelo", "pela", "seus", "suas", "isso", "aos",
+    # French
+    "les", "des", "une", "est", "pas", "dans", "pour", "avec", "mais",
+    "aussi", "cette", "nous", "vous", "ils", "elles", "être", "été", "aux",
+    "ces", "sont", "était", "votre", "notre", "leur",
+    # Italian
+    "gli", "della", "delle", "sono", "anche", "questo", "questa", "perché",
+    "molto", "nella", "degli",
+    # German
+    "der", "die", "das", "und", "ist", "nicht", "sich", "mit", "auf", "für",
+    "ein", "eine", "sind", "auch", "dass", "werden", "wird", "nur", "eine",
+    "des", "dem", "den",
+})
+
+# Two foreign markers (chars that Spanish never uses) or two foreign function
+# words veto a supported-language verdict.
+FOREIGN_WORD_MIN_HITS = 2
+FOREIGN_WORD_MIN_SHARE = 0.03
+UNSUPPORTED_LANGUAGE_MARKERS = (
+    "ã", "õ", "ç", "ê", "ô", "à", "ë", "ï", "œ", "æ", "ä", "ö", "ß", "å", "ø",
+    "è", "ù", "î", "û", "ò", "ì",
+)
+
+MIN_LANGUAGE_TOKENS = 15
+_TOKEN_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+_MARKER_RE = re.compile("[%s]" % "".join(UNSUPPORTED_LANGUAGE_MARKERS))
+
+# One-entry memo. Language detection and the scan-first short-text check run
+# back to back on the same string, and a full tokenization of a large document
+# is the single most expensive part of the route; caching the last input turns
+# two passes over the text into one.
+_LAST_TEXT: str | None = None
+_LAST_TOKENS: list[str] = []
+
+
+def _word_tokens(text: str) -> list[str]:
+    """Unicode word tokens (letters incl. accents), lowercased."""
+    global _LAST_TEXT, _LAST_TOKENS
+    cached = _LAST_TEXT
+    if cached is not None and cached == text:
+        return _LAST_TOKENS
+    tokens = _TOKEN_RE.findall(text.lower())
+    _LAST_TEXT, _LAST_TOKENS = text, tokens
+    return tokens
+
+
+def _share(tokens: list[str], vocabulary: frozenset[str]) -> float:
+    if not tokens:
+        return 0.0
+    return sum(1 for token in tokens if token in vocabulary) / len(tokens)
+
+
+def spanish_function_share(text: str) -> float:
+    """Share of word tokens that are common Spanish function words."""
+    return _share(_word_tokens(text), SPANISH_FUNCTION_WORDS)
+
+
+def is_probably_spanish(text: str, threshold: float = 0.10, min_tokens: int = 15) -> bool:
+    """Cheap Spanish detector.
+
+    Conservative in the opposite direction from ``is_probably_english``: short
+    inputs need stronger evidence (0.15) because the default route for
+    low-signal text is English.
+    """
+    tokens = _word_tokens(text)
+    if len(tokens) < min_tokens:
+        return _share(tokens, SPANISH_FUNCTION_WORDS) >= 0.15
+    return _share(tokens, SPANISH_FUNCTION_WORDS) >= threshold
+
+
+def _foreign_evidence(text: str, tokens: list[str]) -> bool:
+    """Orthographic or lexical evidence of an unsupported neighbor language."""
+    # One regex pass over the lowered text instead of one str.count per marker.
+    if len(_MARKER_RE.findall(text.lower())) >= 2:
+        return True
+    hits = sum(1 for token in tokens if token in FOREIGN_FUNCTION_WORDS)
+    if hits < FOREIGN_WORD_MIN_HITS:
+        return False
+    return not tokens or hits / len(tokens) >= FOREIGN_WORD_MIN_SHARE
+
+
+def word_token_count(text: str) -> int:
+    """Number of Unicode word tokens (the language signal's unit)."""
+    return len(_word_tokens(text))
+
+
+def detect_language(text: str) -> str:
+    """Route text to a supported scan language: "en", "es", or "other".
+
+    English is the sticky default: inputs with too little signal stay "en" so
+    the pre-existing behavior (better to scan than to decline) is preserved.
+    Spanish needs positive evidence, and foreign function words or non-Spanish
+    orthography veto it unless English itself has a strong claim — which keeps
+    an English article about France from declining over two French quotes.
+    "other" is the only value that may decline.
+    """
+    tokens = _word_tokens(text)
+    if not tokens:
+        return "en"
+    english_share = _share(tokens, ENGLISH_FUNCTION_WORDS)
+    spanish_share = _share(tokens, SPANISH_FUNCTION_WORDS)
+    if _foreign_evidence(text, tokens) and not (
+        english_share >= 0.20 and english_share > spanish_share
+    ):
+        return "other"
+    if len(tokens) < MIN_LANGUAGE_TOKENS:
+        if spanish_share >= 0.15 and spanish_share >= english_share:
+            return "es"
+        return "en"
+    if spanish_share >= 0.10 and spanish_share >= english_share:
+        return "es"
+    if english_share >= 0.10:
+        return "en"
+    return "other"
+
+
 def words(text: str) -> list[str]:
-    return re.findall(r"[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)?", text.lower())
+    return re.findall(r"[^\W_]+(?:[-'][^\W_]+)?", text.lower())
 
 
 def strip_markdown_for_prose(
