@@ -41,8 +41,9 @@ python3 evals/run_adversarial.py --case ID
 The runner treats manifest rows as evidence inside three deterministic gates.
 Scanner and preservation examples live in compact contract tables and run once
 each. The expanded deterministic surface is still counted: the repository
-fails if it exceeds 80 executable examples or 400 expanded outcome predicates,
-or if a nested contract
+fails if it exceeds 140 executable examples or 560 expanded outcome predicates
+(the bilingual ceiling: English keeps its original allowance and the Spanish
+pack lands on top of it, per `docs/DECISIONS.md`), or if a nested contract
 wrapper hides another matrix. Use the explicit lane commands when you want the
 product or maintenance scope:
 

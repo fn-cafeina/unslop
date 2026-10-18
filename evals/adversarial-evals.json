@@ -53,11 +53,11 @@
         },
         {
           "type": "stdout_contains",
-          "value": "executable examples <= 80"
+          "value": "executable examples <= 140"
         },
         {
           "type": "stdout_contains",
-          "value": "expanded outcome predicates <= 400"
+          "value": "expanded outcome predicates <= 560"
         }
       ]
     },

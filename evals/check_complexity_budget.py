@@ -18,8 +18,13 @@ from _check_support import ROOT, run, load_evals  # noqa: E402,F401
 from _check_support import validate_contract_table  # noqa: E402
 
 
-MAX_EXECUTABLE_EXAMPLES = 80
-MAX_EXPANDED_OUTCOME_PREDICATES = 400
+# Bilingual ceiling (docs/DECISIONS.md, 2026-10-18 "Spanish support at parity").
+# The budget exists to keep the deterministic surface deliberate, not to cap the
+# product at one language: English keeps its original allowance and the Spanish
+# pack lands on top of it. Raising these numbers is a product decision and the
+# assertions in adversarial-evals.json / eval_groups.py move with them.
+MAX_EXECUTABLE_EXAMPLES = 140
+MAX_EXPANDED_OUTCOME_PREDICATES = 560
 CONTRACT_FAMILIES = (
     "scanner-examples",
     "preservation-examples",

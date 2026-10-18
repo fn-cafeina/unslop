@@ -212,11 +212,20 @@ are committed instead.
 
 On the measured development machine, `python3 evals/check.py --full` completed
 in about three seconds with no expected or unexpected failures. The deterministic
-surface is explicitly capped at 80 executable examples and 400 expanded outcome
-predicates; the current counts are printed by
+surface is explicitly capped at 140 executable examples and 560 expanded outcome
+predicates (the bilingual ceiling; English keeps its original allowance and the
+Spanish pack lands on top of it); the current counts are printed by
 `python3 evals/check_complexity_budget.py`. The scanner contract separately
-reports 36/36 structural patterns, 16/16 literal triggers, and 20/20 protected
-categories.
+reports 36/36 English and 18/18 Spanish structural patterns, 16/16 English and
+63/63 Spanish literal triggers, and 20/20 protected categories.
+
+Note (2026-10-18): the Spanish-support change touches the validation stack and
+the pinned shipping contract, so the v9 acceptance artifacts recorded above no
+longer match the current `shipping_contract_sha256` / `validation_stack_sha256`.
+Those artifacts are stale evidence for the previous revision, not a claim about
+the bilingual build; re-run the live Luna/Sol matrix (`references/pipeline.md`)
+and re-pin `evals/core-thresholds.json` / `core-thresholds-v2.json` before
+treating any acceptance result as current.
 
 ## Next valid experiment
 

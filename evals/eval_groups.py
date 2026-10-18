@@ -53,10 +53,10 @@ REQUIRED_AGGREGATE_ROWS = {
         "command": ["python3", "evals/check_complexity_budget.py"],
         "assertions": [
             {"type": "exit_code", "equals": 0},
-            {"type": "stdout_contains", "value": "executable examples <= 80"},
+            {"type": "stdout_contains", "value": "executable examples <= 140"},
             {
                 "type": "stdout_contains",
-                "value": "expanded outcome predicates <= 400",
+                "value": "expanded outcome predicates <= 560",
             },
         ],
     },

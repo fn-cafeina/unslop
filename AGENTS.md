@@ -11,7 +11,9 @@ untouched because it serves old consumers, not current product decisions.
 
 1. Add the smallest red scanner example before implementation.
 2. A scanner pattern needs one false-negative row and one `protects`
-   false-positive row.
+   false-positive row. A Spanish pattern goes in `scripts/patterns_es.py`, gets
+   its row in the same `scanner-examples.json` table, and documents its key in
+   `references/taboo-phrases-es.md` (`check_taboo_parity.py` enforces it).
 3. A collocation-gated word also needs one REC row proving its jargon use still
    flags.
 4. Prefer a minimal pair in `evals/fixtures/pairs/` for contextual or literal
@@ -53,8 +55,10 @@ Run the product, maintenance, and behavioral integrity lanes together with:
 python3 evals/check.py --full
 ```
 
-The deterministic surface may not exceed 80 executable examples or 400
-expanded outcome predicates, and nested aggregate wrappers are forbidden. The
+The deterministic surface may not exceed 140 executable examples or 560
+expanded outcome predicates (the bilingual ceiling: English keeps its original
+allowance and the Spanish pack lands on top of it, per `docs/DECISIONS.md`), and
+nested aggregate wrappers are forbidden. The
 budget counts contract-table assertions directly and recursively expands each
 Python fixture's final pass/fail logic; do not describe wrapper rows as atomic.
 The full command keeps

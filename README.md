@@ -187,8 +187,10 @@ own eval row.
   `$47.3M` can't silently become `$47.3 billion`, and `150 km` can't become `150 miles`.
 - **Genre carve-outs.** Bold-label lists are correct in reference docs, staccato is correct in
   social copy, and a section-roadmap abstract is academic convention rather than a tell.
-- **English only.** Non-English input gets cheap detection and a clear decline. That's the one
-  graceful refusal in the product, and the scanners return `non_english: true` and stop.
+- **English and Spanish.** Both languages run the same scanners, the same categories, and the
+  same validation battery; the input's language is the output's language. Any other language
+  gets cheap detection and a clear decline (`non_english: true`), the one graceful refusal in
+  the product.
 
 ## Voice: teach and mimic
 
@@ -337,11 +339,13 @@ not prove that UNSLOP improves prose.
   manifest, Luna runner interface, scorer, evidence boundaries, and acceptance gate.
 - **Bounded release suite.** `python3 evals/check.py --full` adds the deterministic safety and
   integrity matrix, generated-benchmark currency, and strict leakage validation. The suite is
-  capped at 80 executable examples and 400 expanded outcome predicates, including predicates
+  capped at 140 executable examples and 560 expanded outcome predicates (bilingual ceiling:
+  English keeps its original allowance and the Spanish pack lands on top), including predicates
   hidden inside Python fixtures. Nested aggregate wrappers fail the build.
 - **Compact scanner evidence.** Scanner, preservation, and maintenance examples live in
-  explicit contract tables. Current coverage is 36/36 structural patterns, 16/16 literal
-  triggers, and 20/20 protected categories, with zero expected failures.
+  explicit contract tables. Current coverage is 36/36 English and 18/18 Spanish structural
+  patterns, 16/16 English and 63/63 Spanish literal triggers, and 20/20 protected categories,
+  with zero expected failures.
 - **Behavioral layer.** `evals/shared-benchmark.json` is generated from 12 `skill` cases with
   three ablations. It is useful for shaping and regression checks, but it is not the core
   product scoreboard.

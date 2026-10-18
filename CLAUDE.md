@@ -11,7 +11,9 @@ not current product decisions.
 
 1. Add the smallest red case before implementation.
 2. A scanner pattern needs one false-negative row and one `protects`
-   false-positive row.
+   false-positive row. A Spanish pattern goes in `scripts/patterns_es.py`, gets
+   its row in the same `scanner-examples.json` table, and documents its key in
+   `references/taboo-phrases-es.md` (`check_taboo_parity.py` enforces it).
 3. A collocation-gated word also needs one REC row proving its jargon use still
    flags.
 4. Prefer a minimal pair in `evals/fixtures/pairs/` for contextual or literal
