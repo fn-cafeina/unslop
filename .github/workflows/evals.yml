@@ -24,3 +24,5 @@ jobs:
         run: pipx install git+https://github.com/adewale/skill-eval-harness.git
       - name: Run repository checks
         run: python3 evals/check.py
+      - name: Run deterministic maintenance matrix
+        run: python3 evals/check.py --maintenance
