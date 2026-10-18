@@ -913,6 +913,67 @@
           "check": "The announcement preserves the pilot from 6 May to 20 May and leaves this informative paragraph unchanged: Who can join? Only the 24 support agents on the evening shift. Maya will collect their notes on 21 May."
         }
       ]
+    },
+    {
+      "id": "SKILL-ES-REWRITE-01",
+      "category": "language_support",
+      "title": "Rewrite a Spanish draft under the same contract and in Spanish",
+      "target": "skill",
+      "prompt": "Limpia este párrafo para publicarlo. Conserva sus datos y devuelve solo el texto editado.\n\nEn la era digital, es importante destacar que nuestra plataforma desempeña un papel crucial en el ecosistema. No solo procesa 4.200 peticiones por segundo, sino también reduce la latencia un 12 % desde enero. Somos un referente y el socio que todo equipo necesita.",
+      "failure_mode": "The editor answers in English, translates the paragraph, keeps the Spanish scaffolding (\"en la era digital\", \"desempeña un papel crucial\", \"no solo ... sino también\"), invents a closing claim about being a referent, or drops the numbers.",
+      "correct_behavior": "The rewrite stays in Spanish and removes the era framing, the role inflation, and the not-only-but-also construction while preserving 4.200 peticiones por segundo, the 12 % latency reduction, and the January date. No claim is added.",
+      "assertions": [
+        {
+          "type": "judge",
+          "check": "The output is in Spanish (not a translation into another language) and keeps the paragraph's meaning and unit of address; it is not an English answer."
+        },
+        {
+          "type": "judge",
+          "check": "The output removes the AI scaffolding: the \"en la era digital\" framing, the \"desempeña un papel crucial\" inflation, the \"no solo ... sino también\" construction, and the referent/partner closing claim."
+        },
+        {
+          "type": "judge",
+          "check": "The output preserves 4.200 peticiones por segundo, the 12 % latency reduction, and the January date, and adds no new claim, promise, or opinion."
+        }
+      ]
+    },
+    {
+      "id": "SKILL-ES-DECLINE-01",
+      "category": "language_support",
+      "title": "Decline an unsupported language instead of rewriting it",
+      "target": "skill",
+      "prompt": "Deixa este texto mais humano e devolve só o texto editado.\n\nNão é apenas uma questão de tempo, mas também de coragem. A informação está no relatório final do projeto e a equipe vai revisar os números na segunda-feira.",
+      "failure_mode": "The agent rewrites Portuguese prose as if it were supported (running English or Spanish rules on it), translates it, or invents findings the product cannot defend.",
+      "correct_behavior": "The agent declines: it states plainly that the product supports English and Spanish only, so it will not rewrite this text, and it returns the input unchanged rather than guessing at Portuguese AI-isms.",
+      "assertions": [
+        {
+          "type": "judge",
+          "check": "The response declines the task because the text is Portuguese (an unsupported language for this product), stating that English and Spanish are the supported languages."
+        },
+        {
+          "type": "judge",
+          "check": "The response does not rewrite, translate, or claim findings for the Portuguese text; the original is left unchanged."
+        }
+      ]
+    },
+    {
+      "id": "SKILL-ES-CLEANUP-01",
+      "category": "language_support",
+      "title": "Report Spanish findings as suggestions without editing the document",
+      "target": "skill",
+      "prompt": "Revisa este correo y dime qué suena a IA. No cambies nada todavía.\n\nHola equipo:\n\nCabe destacar que el despliegue del martes salió bien: 12 minutos de ventana y cero errores. En definitiva, la sinergia entre los equipos fue la clave del resultado.",
+      "failure_mode": "The agent rewrites the email, reports findings in a different language than the document, or invents issues not present in the text.",
+      "correct_behavior": "The agent reports, without editing, the Spanish tells it found (the \"cabe destacar que\" filler, the \"en definitiva\" closing scaffold, the \"sinergia\" jargon) and leaves the factual content (12 minutes, zero errors, Tuesday) untouched and unedited.",
+      "assertions": [
+        {
+          "type": "judge",
+          "check": "The response only reports findings; it does not produce a rewritten email or apply edits."
+        },
+        {
+          "type": "judge",
+          "check": "The findings name the Spanish tells present in the text (\"cabe destacar que\", \"en definitiva\", \"sinergia\") and the report is written so a Spanish writer can act on it."
+        }
+      ]
     }
   ]
 }

@@ -52,6 +52,9 @@ SPLITS: dict[str, str] = {
     "SKILL-PARAPHRASE-01": "tune",
     "SKILL-DEHEDGE-02": "holdout",
     "SKILL-REGISTER-01": "holdout",
+    "SKILL-ES-REWRITE-01": "tune",
+    "SKILL-ES-DECLINE-01": "tune",
+    "SKILL-ES-CLEANUP-01": "tune",
 }
 
 DOMAIN: dict[str, str] = {
@@ -68,6 +71,9 @@ DOMAIN: dict[str, str] = {
     "SKILL-SAFETY-SEMANTIC-02": "safety",
     "SKILL-CORE-DIRTY-01": "product",
     "SKILL-PARAPHRASE-01": "operations",
+    "SKILL-ES-REWRITE-01": "product",
+    "SKILL-ES-DECLINE-01": "product",
+    "SKILL-ES-CLEANUP-01": "product",
 }
 
 # Difficulty is a coarse hint for reporting, not a gate.

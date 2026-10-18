@@ -602,6 +602,103 @@
         "adversarial",
         "failure_mode:The editor only removes familiar catalog phrases, leaves par"
       ]
+    },
+    {
+      "id": "SKILL-ES-REWRITE-01",
+      "split": "tune",
+      "kind": "language_support",
+      "domain": "product",
+      "difficulty": "hard",
+      "trigger_type": "explicit",
+      "success_goals": [
+        "Rewrite a Spanish draft under the same contract and in Spanish"
+      ],
+      "prompt": "Limpia este p\u00e1rrafo para publicarlo. Conserva sus datos y devuelve solo el texto editado.\n\nEn la era digital, es importante destacar que nuestra plataforma desempe\u00f1a un papel crucial en el ecosistema. No solo procesa 4.200 peticiones por segundo, sino tambi\u00e9n reduce la latencia un 12 % desde enero. Somos un referente y el socio que todo equipo necesita.",
+      "expected_behavior": [
+        "The rewrite stays in Spanish and removes the era framing, the role inflation, and the not-only-but-also construction while preserving 4.200 peticiones por segundo, the 12 % latency reduction, and the January date. No claim is added."
+      ],
+      "assertions": [
+        {
+          "name": "skill-es-rewrite-01-judge",
+          "type": "judge",
+          "rubric": [
+            "The output is in Spanish (not a translation into another language) and keeps the paragraph's meaning and unit of address; it is not an English answer.",
+            "The output removes the AI scaffolding: the \"en la era digital\" framing, the \"desempe\u00f1a un papel crucial\" inflation, the \"no solo ... sino tambi\u00e9n\" construction, and the referent/partner closing claim.",
+            "The output preserves 4.200 peticiones por segundo, the 12 % latency reduction, and the January date, and adds no new claim, promise, or opinion."
+          ],
+          "severity": "gate",
+          "oracle": "live"
+        }
+      ],
+      "tags": [
+        "language_support",
+        "adversarial",
+        "failure_mode:The editor answers in English, translates the paragraph, kee"
+      ]
+    },
+    {
+      "id": "SKILL-ES-DECLINE-01",
+      "split": "tune",
+      "kind": "language_support",
+      "domain": "product",
+      "difficulty": "hard",
+      "trigger_type": "explicit",
+      "success_goals": [
+        "Decline an unsupported language instead of rewriting it"
+      ],
+      "prompt": "Deixa este texto mais humano e devolve s\u00f3 o texto editado.\n\nN\u00e3o \u00e9 apenas uma quest\u00e3o de tempo, mas tamb\u00e9m de coragem. A informa\u00e7\u00e3o est\u00e1 no relat\u00f3rio final do projeto e a equipe vai revisar os n\u00fameros na segunda-feira.",
+      "expected_behavior": [
+        "The agent declines: it states plainly that the product supports English and Spanish only, so it will not rewrite this text, and it returns the input unchanged rather than guessing at Portuguese AI-isms."
+      ],
+      "assertions": [
+        {
+          "name": "skill-es-decline-01-judge",
+          "type": "judge",
+          "rubric": [
+            "The response declines the task because the text is Portuguese (an unsupported language for this product), stating that English and Spanish are the supported languages.",
+            "The response does not rewrite, translate, or claim findings for the Portuguese text; the original is left unchanged."
+          ],
+          "severity": "gate",
+          "oracle": "live"
+        }
+      ],
+      "tags": [
+        "language_support",
+        "adversarial",
+        "failure_mode:The agent rewrites Portuguese prose as if it were supported "
+      ]
+    },
+    {
+      "id": "SKILL-ES-CLEANUP-01",
+      "split": "tune",
+      "kind": "language_support",
+      "domain": "product",
+      "difficulty": "hard",
+      "trigger_type": "explicit",
+      "success_goals": [
+        "Report Spanish findings as suggestions without editing the document"
+      ],
+      "prompt": "Revisa este correo y dime qu\u00e9 suena a IA. No cambies nada todav\u00eda.\n\nHola equipo:\n\nCabe destacar que el despliegue del martes sali\u00f3 bien: 12 minutos de ventana y cero errores. En definitiva, la sinergia entre los equipos fue la clave del resultado.",
+      "expected_behavior": [
+        "The agent reports, without editing, the Spanish tells it found (the \"cabe destacar que\" filler, the \"en definitiva\" closing scaffold, the \"sinergia\" jargon) and leaves the factual content (12 minutes, zero errors, Tuesday) untouched and unedited."
+      ],
+      "assertions": [
+        {
+          "name": "skill-es-cleanup-01-judge",
+          "type": "judge",
+          "rubric": [
+            "The response only reports findings; it does not produce a rewritten email or apply edits.",
+            "The findings name the Spanish tells present in the text (\"cabe destacar que\", \"en definitiva\", \"sinergia\") and the report is written so a Spanish writer can act on it."
+          ],
+          "severity": "gate",
+          "oracle": "live"
+        }
+      ],
+      "tags": [
+        "language_support",
+        "adversarial",
+        "failure_mode:The agent rewrites the email, reports findings in a differen"
+      ]
     }
   ],
   "ablations": [
