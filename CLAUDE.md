@@ -32,10 +32,24 @@ coverage and every category to have a protecting FP row. Use
 
 ## Check the repository
 
-Run the single canonical command:
+Run the fast core-contract loop while editing:
 
 ```bash
 python3 evals/check.py
+```
+
+Run the deterministic maintenance matrix whenever the scanner, preservation
+validator, runner, or benchmark plumbing changes. The whole Spanish surface
+(contract rows, language pins, silhouette reference, tool rows) lives there:
+
+```bash
+python3 evals/check.py --maintenance
+```
+
+Run both plus the behavioral integrity checks before a release:
+
+```bash
+python3 evals/check.py --full
 ```
 
 Install the harness if needed:
@@ -45,7 +59,7 @@ uv tool install git+https://github.com/adewale/skill-eval-harness.git
 ```
 
 Use `run_adversarial.py --only PREFIX` or `--case ID` only to diagnose a
-failure; the canonical command already exercises those checks.
+failure; the lane commands already exercise those checks.
 
 If `SKILL.md`, `presets/`, or `references/` changed, also run:
 
