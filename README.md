@@ -3,6 +3,12 @@
 unslop finds formulaic or unclear writing and makes targeted edits while preserving
 meaning and voice. It ships as an agent skill with standalone Python scanners.
 
+This repository is the [`fn-cafeina/unslop`](https://github.com/fn-cafeina/unslop)
+fork: it adds Spanish at parity with English (catalogs, scanners, preservation,
+voice, presets; see [`docs/DECISIONS.md`](docs/DECISIONS.md)) and tracks
+[`theclaymethod/unslop`](https://github.com/theclaymethod/unslop) for everything
+else. Install this fork, not upstream, to get the Spanish support.
+
 Four commands cover the whole surface:
 
 - `/unslop teach` builds a reusable voice from your own writing samples.
@@ -52,22 +58,22 @@ Install to any supported coding agent with [npx skills](https://github.com/verce
 
 ```bash
 # Install to Claude Code (global)
-npx skills add theclaymethod/unslop -g -a claude-code
+npx skills add fn-cafeina/unslop -g -a claude-code
 
 # Install to several agents at once
-npx skills add theclaymethod/unslop -g -a claude-code -a cursor -a codex
+npx skills add fn-cafeina/unslop -g -a claude-code -a cursor -a codex
 
 # Install to every detected agent
-npx skills add theclaymethod/unslop -g
+npx skills add fn-cafeina/unslop -g
 
 # List available skills first
-npx skills add theclaymethod/unslop --list
+npx skills add fn-cafeina/unslop --list
 ```
 
 ### Manual installation
 
 ```bash
-git clone https://github.com/theclaymethod/unslop.git ~/dev/unslop
+git clone https://github.com/fn-cafeina/unslop.git ~/dev/unslop
 ln -s ~/dev/unslop ~/.claude/skills/unslop
 # Or wire it as a slash command:
 ln -s ~/dev/unslop/SKILL.md ~/.claude/commands/unslop.md

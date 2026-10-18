@@ -6,6 +6,8 @@ user-invocable: true
 argument-hint: "[teach · cleanup · rewrite · mimic] [input]"
 metadata:
   author: claytonkim
+  maintainer: fn-cafeina
+  forked-from: theclaymethod/unslop
   version: "2.4.0"
 ---
 
