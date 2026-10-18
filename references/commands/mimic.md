@@ -65,10 +65,9 @@ usual; contractions match"). No rewrite unless asked. This is the cheapest
 voice interaction and the usual one after teach: check drafts often, commission
 rewrites rarely.
 
-## Idioma
+## Language
 
-La carta de voz declara su idioma y `voice_score.py` puntúa con los pesos de
-ese idioma (en español no hay componente de contracciones). Los gates de
-remoción, preservación y copia son los mismos. Un borrador en un idioma
-distinto al de la muestra es un fallo: vuelve a redactar en el idioma de la
-carta antes de puntuar.
+The voice card declares its language, and `voice_score.py` scores with that
+language's weights (Spanish has no contraction component). The removal,
+preservation and copy gates are the same. A draft in a different language than
+the card is a failure: rewrite it in the card's language before scoring.

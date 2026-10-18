@@ -48,11 +48,11 @@ block in SKILL.md **Output Format**.
 For multi-agent execution, use `references/pipeline.md`; for orchestrated
 detector packs, use `references/packs/`.
 
-## Idioma
+## Language
 
-English y español están soportados; la salida va en el idioma de la entrada.
-Los escáneres detectan el idioma por su cuenta, así que la batería de
-validación no cambia: lee el preset correspondiente (`presets/` o
-`presets/es/`) y el catálogo del idioma (`references/taboo-phrases.md` o
-`references/taboo-phrases-es.md`). Un idioma no soportado recibe el declive
-elegante (`non_english: true`) en lugar de una reescritura.
+English and Spanish are supported, and the output language is the input's
+language. The scanners detect it themselves, so the validation battery does not
+change: read the matching preset (`presets/` or `presets/es/`) and catalog
+(`references/taboo-phrases.md` or `references/taboo-phrases-es.md`). An
+unsupported language gets the graceful decline (`non_english: true`) instead of
+a rewrite.

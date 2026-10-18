@@ -76,11 +76,11 @@ Prove the loop before the user trusts it: mimic one paragraph per
 and show the results. A voiced demo that trips a slop gate fails the loop; do not
 ship it with an excuse.
 
-## Idioma
+## Language
 
-Las muestras pueden estar en español. La detección es automática: el perfil
-(`profile.json`) registra `"language": "es"`, las palabras funcionales y la
-tabla de puntuación cambian, y la carta de voz y las hojas se escriben en
-español. Pasa `--lang` a `voice_profile.py` solo para forzar el idioma cuando
-las muestras sean mixtas. Para puntuar, usa un pool de impostores del mismo
-idioma (`evals/fixtures/voice/impostors_es/`).
+Samples may be in Spanish. Detection is automatic: `profile.json` records
+`"language": "es"`, the function-word table and punctuation set switch, and the
+voice card and its sheets are written in Spanish. Pass `--lang` to
+`voice_profile.py` only to force a language when the samples are mixed. Score
+against an impostor pool in the same language
+(`evals/fixtures/voice/impostors_es/`).
