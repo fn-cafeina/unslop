@@ -236,7 +236,7 @@
       "command": [
         "sh",
         "-c",
-        "printf '\\xff\\xfeHere\\x27s the thing: progress' | python3 scripts/banned_phrase_scan.py"
+        "printf '\\377\\376Here\\047s the thing: progress' | python3 scripts/banned_phrase_scan.py"
       ],
       "failure_mode": "sys.stdin.read() raises an uncaught UnicodeDecodeError on non-UTF-8 stdin, so a host agent piping raw bytes gets a Python traceback instead of a JSON reply.",
       "correct_behavior": "Decode with errors=\"replace\" and keep scanning; the surviving text still trips a retained hard-severity pattern.",
