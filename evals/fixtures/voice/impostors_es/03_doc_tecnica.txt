@@ -1,0 +1,5 @@
+El servidor de facturación usa dos colas: una para los recibos mensuales y otra para los reintentos. Si la segunda crece por encima de mil mensajes, el panel de alertas lo marca en rojo y avisa al equipo de guardia.
+
+La causa más común de atasco es una factura con un número de identificación repetido. El sistema antiguo los permitía y la base de datos los arrastra desde 2019.
+
+Antes de reiniciar nada, revisa el contador de duplicados en la vista de control. Si baja solo, el atasco se resolverá en unos minutos. Si sigue subiendo, hay una integración enviando datos en bucle.

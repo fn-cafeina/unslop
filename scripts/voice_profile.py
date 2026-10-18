@@ -8,6 +8,9 @@ observed in a caller-supplied background corpus. It is meant only as a stable
 normalizer; pass --background with same-genre documents for calibrated work.
 """
 
+from __future__ import annotations
+
+
 import argparse
 import collections
 import json
@@ -16,6 +19,11 @@ import re
 import statistics
 import sys
 from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from _lang import SPANISH_FUNCTION_WORDS, detect_language  # noqa: E402
 
 FUNCTION_WORDS = """
 the of and to in a is that it for as with was on be by he i this are or his from at
@@ -36,9 +44,37 @@ they'd i'll you'll he'll she'll we'll they'll me him us mine yours ours theirs m
 yourself himself herself itself ourselves yourselves themselves
 """.split()
 
+# Spanish function words come from the shared language module so the stylometric
+# table and the language route cannot drift apart. Sorted into a list to match
+# the English table's shape.
+FUNCTION_WORDS_ES = sorted(SPANISH_FUNCTION_WORDS)
+
 PUNCT = [",", ".", ";", ":", "?", "!", "-", "(", ")", '"', "'"]
+# Spanish adds the opening marks and its own quote style. The em dash is in the
+# list because Spanish dialogue and asides use it where English uses commas.
+PUNCT_ES = PUNCT + ["¿", "¡", "«", "»", "—"]
 WORD_RE = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?|\d+")
+WORD_RE_ES = re.compile(r"[A-Za-zÁÉÍÓÚÑÜáéíóúñü]+|\d+")
 SENT_RE = re.compile(r"[^.!?]+[.!?]?")
+
+# Words this frequent are the ones a background table can pin down instead of
+# falling back to the broad default.
+_TOP_FUNCTION_WORDS = {"en": {"the", "of", "and", "to", "in", "a"},
+                       "es": {"el", "de", "que", "la", "y", "en"}}
+_TOP_FUNCTION_MEAN = 0.025
+_FALLBACK_MEAN = 0.0025
+_FALLBACK_STD = 0.006
+
+
+def _tables(lang: str) -> tuple[list[str], list[str], "re.Pattern[str]"]:
+    if lang == "es":
+        return FUNCTION_WORDS_ES, PUNCT_ES, WORD_RE_ES
+    return FUNCTION_WORDS, PUNCT, WORD_RE
+
+
+def punct_for(lang: str = "en") -> list[str]:
+    """Punctuation inventory used by the punctuation distance."""
+    return _tables(lang)[1]
 
 
 def iter_docs(root):
@@ -51,14 +87,14 @@ def normalize(text):
     return re.sub(r"\s+", " ", text.lower()).strip()
 
 
-def words(text):
-    return WORD_RE.findall(text.lower())
+def words(text, lang="en"):
+    return _tables(lang)[2].findall(text.lower())
 
 
-def sentences(text):
+def sentences(text, lang="en"):
     out = []
     for part in SENT_RE.findall(text):
-        toks = words(part)
+        toks = words(part, lang)
         if toks:
             out.append(toks)
     return out
@@ -73,14 +109,14 @@ def char3_counts(text, limit=None):
     return dict(items)
 
 
-def function_freq(tokens):
+def function_freq(tokens, lang="en"):
     total = max(1, len(tokens))
     counts = collections.Counter(tokens)
-    return {w: counts[w] / total for w in FUNCTION_WORDS}
+    return {w: counts[w] / total for w in _tables(lang)[0]}
 
 
-def sentence_stats(text):
-    lengths = [len(s) for s in sentences(text)]
+def sentence_stats(text, lang="en"):
+    lengths = [len(s) for s in sentences(text, lang)]
     if not lengths:
         return {"lengths": [], "median": 0.0, "iqr": 0.0}
     ordered = sorted(lengths)
@@ -109,39 +145,41 @@ def mtld(tokens, threshold=0.72):
     return len(tokens) / factors if factors else float(len(tokens))
 
 
-def feature_bundle(text):
-    toks = words(text)
+def feature_bundle(text, lang="en"):
+    function_words, punct, _ = _tables(lang)
+    toks = words(text, lang)
     total = max(1, len(toks))
-    punct_counts = collections.Counter(ch for ch in text if ch in PUNCT)
+    punct_counts = collections.Counter(ch for ch in text if ch in punct)
     contractions = sum(1 for t in toks if "'" in t)
     hist = collections.Counter(min(len(t), 15) for t in toks)
     paragraphs = [p for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
     return {
         "char3": char3_counts(text, 2000),
-        "function_words": function_freq(toks),
-        "sentence_lengths": sentence_stats(text),
-        "punctuation": {p: punct_counts[p] / total for p in PUNCT},
+        "function_words": function_freq(toks, lang),
+        "sentence_lengths": sentence_stats(text, lang),
+        "punctuation": {p: punct_counts[p] / total for p in punct},
         "contraction_rate": contractions / total,
         "mtld": mtld(toks),
         "word_length_histogram": {str(i): hist[i] / total for i in range(1, 16)},
         "paragraph_stats": {
             "count": len(paragraphs),
-            "mean_words": (sum(len(words(p)) for p in paragraphs) / len(paragraphs)) if paragraphs else 0.0,
+            "mean_words": (sum(len(words(p, lang)) for p in paragraphs) / len(paragraphs)) if paragraphs else 0.0,
         },
         "total_words": len(toks),
     }
 
 
-def background_stats(root=None):
+def background_stats(root=None, lang="en"):
+    function_words = _tables(lang)[0]
     docs = []
     if root:
         docs = [p.read_text(errors="replace") for p in iter_docs(root)]
     if not docs:
-        return {w: {"mean": 0.0025 if w not in {"the", "of", "and", "to", "in", "a"} else 0.025,
-                    "std": 0.006} for w in FUNCTION_WORDS}
-    rows = [function_freq(words(text)) for text in docs]
+        return {w: {"mean": _TOP_FUNCTION_MEAN if w in _TOP_FUNCTION_WORDS[lang] else _FALLBACK_MEAN,
+                    "std": _FALLBACK_STD} for w in function_words}
+    rows = [function_freq(words(text, lang), lang) for text in docs]
     stats = {}
-    for w in FUNCTION_WORDS:
+    for w in function_words:
         vals = [r[w] for r in rows]
         stats[w] = {
             "mean": statistics.mean(vals),
@@ -150,14 +188,18 @@ def background_stats(root=None):
     return stats
 
 
-def build_profile(samples_dir, background=None):
+def build_profile(samples_dir, background=None, lang=None):
     paths = list(iter_docs(samples_dir))
     text = "\n\n".join(p.read_text(errors="replace") for p in paths)
-    profile = feature_bundle(text)
-    profile["function_word_background"] = background_stats(background)
+    if lang is None:
+        lang = detect_language(text)
+    profile = feature_bundle(text, lang)
+    profile["language"] = lang
+    profile["function_word_background"] = background_stats(background, lang)
     profile["metadata"] = {
         "doc_count": len(paths),
         "total_words": profile["total_words"],
+        "language": lang,
         "low_confidence": profile["total_words"] < 2000,
         "genre_warning": "profile has fewer than 2000 words" if profile["total_words"] < 2000 else "",
     }
@@ -169,6 +211,8 @@ def parse_args(argv):
     parser.add_argument("samples_dir")
     parser.add_argument("-o", "--output", required=True)
     parser.add_argument("--background")
+    parser.add_argument("--lang", choices=["en", "es"],
+                        help="override sample-language detection")
     return parser.parse_args(argv)
 
 
@@ -183,7 +227,7 @@ def main(argv):
               f"(recursively). Rename samples to .txt/.md or point at the right "
               f"directory.", file=sys.stderr)
         return 2
-    profile = build_profile(root, args.background)
+    profile = build_profile(root, args.background, args.lang)
     if profile["metadata"]["low_confidence"]:
         print(profile["metadata"]["genre_warning"], file=sys.stderr)
     Path(args.output).write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n")

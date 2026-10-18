@@ -2733,9 +2733,11 @@
     "yourself": 0.0,
     "yourselves": 0.0
   },
+  "language": "en",
   "metadata": {
     "doc_count": 4,
     "genre_warning": "profile has fewer than 2000 words",
+    "language": "en",
     "low_confidence": true,
     "total_words": 1037
   },

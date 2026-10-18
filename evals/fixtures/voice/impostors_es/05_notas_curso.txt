@@ -1,0 +1,5 @@
+En la clase de hoy hemos medido la humedad del compost con dos sondas distintas y los resultados no coincidían ni de lejos. Una marcaba treinta y ocho por ciento y la otra sesenta y dos.
+
+Hemos repetido la medición tres veces cambiando de sitio y la diferencia se mantenía. Al final hemos descubierto que una de las sondas estaba calibrada para tierra mineral y la otra para sustrato de maceta, que retiene mucho más.
+
+La conclusión práctica es sencilla: apunta siempre el modelo de sonda en el cuaderno. El número sin el aparato no significa nada, y dentro de un año nadie se acordará de cuál usamos.

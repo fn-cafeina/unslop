@@ -13,6 +13,7 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from _lang import detect_language  # noqa: E402
 from harvest_samples import DATE_FLOOR, recency_value  # noqa: E402
 
 
@@ -34,7 +35,21 @@ def load_candidates(path: Path) -> list[dict[str, Any]]:
     raise ValueError("candidates file must contain a list or {candidates: [...]}")
 
 
-def cells_for(text: str) -> list[str]:
+# Spanish lexical markers for the same cells. The taxonomy is shared, so a
+# Spanish candidate lands in the same buckets a Spanish teach run needs.
+SPANISH_CELL_PATTERNS = {
+    "question_addressed": r"[?¿]|\b(?:por\s+qu[ée]|c[óo]mo|qu[ée]|cu[áa]ndo|d[óo]nde|cu[áa]l)\b",
+    "anecdote_markers": r"\b(?:el\s+trimestre\s+pasado|ayer|hoy|el\s+otro\s+d[íi]a|una\s+vez|"
+                        r"la\s+semana\s+pasada|hace\s+unos?\s+(?:d[íi]as|meses|a[ñn]os)|"
+                        r"cuando\s+[a-záéíóúñ]+(?:amos|aba|ía|amos)|me\s+di\s+cuenta|"
+                        r"recuerdo\s+que|me\s+acuerdo)\b",
+    "disagreement": r"\b(?:no\s+estoy\s+de\s+acuerdo|sin\s+embargo|en\s+cambio|"
+                    r"no\s+me\s+convence|difiero|en\s+lugar\s+de|pero\s+no|"
+                    r"aun\s+as[íi]|tampoco)\b",
+}
+
+
+def cells_for(text: str, lang: str = "en") -> list[str]:
     lowered = text.lower()
     cells = []
     if re.search(r"\b\d+(?:[,.]\d+)?%?\b", lowered):
@@ -105,11 +120,11 @@ def rank_enriched(candidates: list[dict[str, Any]]) -> list[int]:
     return [candidate_id(candidates[idx], idx) for idx, _ in ranked]
 
 
-def heuristic(candidates: list[dict[str, Any]]) -> dict[str, Any]:
+def heuristic(candidates: list[dict[str, Any]], lang: str = "en") -> dict[str, Any]:
     enriched = []
     seen_empty = set()
     for idx, candidate in enumerate(candidates):
-        cells = cells_for(candidate.get("text", ""))
+        cells = cells_for(candidate.get("text", ""), lang)
         quality = quality_for(candidate, cells)
         fills_empty = any(cell not in seen_empty for cell in cells)
         seen_empty.update(cells)
@@ -201,6 +216,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--mode", choices=["heuristic", "agent"], default="heuristic")
     parser.add_argument("--out-dir", default="harvest-agent-tasks")
     parser.add_argument("--merge")
+    parser.add_argument("--lang", choices=["auto", "en", "es"], default="auto",
+                        help="candidate language for the heuristic cells (default: detect)")
     return parser.parse_args(argv)
 
 
@@ -211,7 +228,11 @@ def main(argv: list[str]) -> int:
         return 0
     candidates = load_candidates(Path(args.candidates))
     if args.mode == "heuristic":
-        print(json.dumps(heuristic(candidates), indent=2, sort_keys=True))
+        lang = args.lang
+        if lang == "auto":
+            blob = "\n".join(str(c.get("text", "")) for c in candidates)
+            lang = "es" if detect_language(blob) == "es" else "en"
+        print(json.dumps(heuristic(candidates, lang), indent=2, sort_keys=True))
     else:
         print(json.dumps(write_agent_tasks(candidates, Path(args.out_dir)), indent=2, sort_keys=True))
     return 0

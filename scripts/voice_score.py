@@ -27,6 +27,23 @@ WEIGHTS = {
     "word_length": 0.10,
 }
 
+# Spanish has no contraction habit to measure (only "al" and "del", which are
+# words, not clitics), so the contraction key is dropped and the remaining
+# weights are renormalized by 1/(1 - 0.07). Everything else keeps the WP10a
+# research weights.
+WEIGHTS_ES = {
+    "char3": round(0.30 / 0.93, 4),
+    "delta": round(0.25 / 0.93, 4),
+    "sentence_emd": round(0.10 / 0.93, 4),
+    "punctuation": round(0.08 / 0.93, 4),
+    "mtld": round(0.10 / 0.93, 4),
+    "word_length": round(0.10 / 0.93, 4),
+}
+
+
+def weights_for(profile) -> dict:
+    return WEIGHTS_ES if profile.get("language") == "es" else WEIGHTS
+
 
 def cosine_distance(a, b, keys=None):
     keys = list(keys) if keys is not None else sorted(set(a) | set(b))
@@ -59,8 +76,9 @@ def l1(a, b, keys):
     return sum(abs(a.get(k, 0.0) - b.get(k, 0.0)) for k in keys)
 
 
-def distances(profile, feats, subset=None):
-    subset = set(subset or WEIGHTS)
+def distances(profile, feats, subset=None, weights=None):
+    weights = weights_for(profile) if weights is None else weights
+    subset = set(subset or weights)
     out = {}
     if "char3" in subset:
         keys = set(profile["char3"]) | set(feats["char3"])
@@ -75,7 +93,8 @@ def distances(profile, feats, subset=None):
         med = profile["sentence_lengths"].get("median") or 1.0
         out["sentence_emd"] = emd(profile["sentence_lengths"]["lengths"], feats["sentence_lengths"]["lengths"]) / med
     if "punctuation" in subset:
-        out["punctuation"] = l1(profile["punctuation"], feats["punctuation"], voice_profile.PUNCT)
+        punct = voice_profile.punct_for(profile.get("language", "en"))
+        out["punctuation"] = l1(profile["punctuation"], feats["punctuation"], punct)
     if "contraction" in subset:
         out["contraction"] = abs(profile["contraction_rate"] - feats["contraction_rate"])
     if "mtld" in subset:
@@ -86,20 +105,23 @@ def distances(profile, feats, subset=None):
     return out
 
 
-def weighted_sum(dists):
-    return sum(WEIGHTS[k] * dists.get(k, 0.0) for k in WEIGHTS)
+def weighted_sum(dists, weights=None):
+    weights = WEIGHTS if weights is None else weights
+    return sum(weights[k] * dists.get(k, 0.0) for k in weights)
 
 
-def impostor_features(root):
+def impostor_features(root, lang="en"):
     feats = []
     for path in voice_profile.iter_docs(root):
-        feats.append((str(path), voice_profile.feature_bundle(path.read_text(errors="replace"))))
+        feats.append((str(path),
+                      voice_profile.feature_bundle(path.read_text(errors="replace"), lang)))
     return feats
 
 
-def zscores(candidate, impostor_rows):
+def zscores(candidate, impostor_rows, weights=None):
+    weights = WEIGHTS if weights is None else weights
     out = {}
-    for key in WEIGHTS:
+    for key in weights:
         vals = [row[key] for row in impostor_rows if key in row]
         if key not in candidate or not vals:
             out[key] = None
@@ -110,9 +132,10 @@ def zscores(candidate, impostor_rows):
     return out
 
 
-def gi_score(profile, cand_feats, impostors, seed):
+def gi_score(profile, cand_feats, impostors, seed, weights=None):
+    weights = weights_for(profile) if weights is None else weights
     rng = random.Random(seed)
-    keys = list(WEIGHTS)
+    keys = list(weights)
     wins = 0
     trials = 64
     # Per-key distances depend only on (profile, feats) -- not on which subset
@@ -124,13 +147,13 @@ def gi_score(profile, cand_feats, impostors, seed):
     # and summing WEIGHTS[k]*value only over the drawn subset is the same
     # float sequence weighted_sum(distances(..., subset)) produced (excluded
     # keys contributed an exact 0.0 term either way).
-    cand_dists = distances(profile, cand_feats)
-    impostor_dists = [(name, distances(profile, imp)) for name, imp in impostors]
+    cand_dists = distances(profile, cand_feats, weights=weights)
+    impostor_dists = [(name, distances(profile, imp, weights=weights)) for name, imp in impostors]
     for _ in range(trials):
         subset = [k for k in keys if rng.random() < 0.5] or [rng.choice(keys)]
-        cand = sum(WEIGHTS[k] * cand_dists.get(k, 0.0) for k in subset)
+        cand = sum(weights[k] * cand_dists.get(k, 0.0) for k in subset)
         sampled = rng.sample(impostor_dists, k=min(len(impostor_dists), max(1, len(impostor_dists) // 2)))
-        if all(cand < sum(WEIGHTS[k] * imp_dists.get(k, 0.0) for k in subset)
+        if all(cand < sum(weights[k] * imp_dists.get(k, 0.0) for k in subset)
                for _, imp_dists in sampled):
             wins += 1
     return wins / trials
@@ -245,15 +268,18 @@ def main(argv):
         print(f"missing candidate: {e}", file=sys.stderr)
         return 2
     profile = json.loads(Path(args.profile).read_text())
-    feats = voice_profile.feature_bundle(text)
+    lang = profile.get("language", "en")
+    weights = weights_for(profile)
+    feats = voice_profile.feature_bundle(text, lang)
     low = feats["total_words"] < 150
-    impostors = impostor_features(args.impostors)
-    dist = distances(profile, feats)
-    imp_dist = [distances(profile, f) for _, f in impostors]
-    zs = zscores(dist, imp_dist)
-    zsum = sum(WEIGHTS[k] * max(-3.0, min(3.0, zs[k] if zs[k] is not None else 0.0)) for k in WEIGHTS)
-    gi = gi_score(profile, feats, impostors, args.seed) if impostors else 0.0
+    impostors = impostor_features(args.impostors, lang)
+    dist = distances(profile, feats, weights=weights)
+    imp_dist = [distances(profile, f, weights=weights) for _, f in impostors]
+    zs = zscores(dist, imp_dist, weights)
+    zsum = sum(weights[k] * max(-3.0, min(3.0, zs[k] if zs[k] is not None else 0.0)) for k in weights)
+    gi = gi_score(profile, feats, impostors, args.seed, weights) if impostors else 0.0
     result = {
+        "language": lang,
         "candidate_words": feats["total_words"],
         "low_confidence": low,
         "distances": {k: (None if low and k in {"sentence_emd", "mtld"} else v) for k, v in dist.items()},
