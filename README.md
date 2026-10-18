@@ -89,14 +89,16 @@ Detection stacks three deterministic scanners, coarse to fine. Each one returns 
 non-zero on a flag. False-positive examples protect tested literal and domain
 uses; unfamiliar contexts still need review.
 
-**Phrase layer** (`scripts/banned_phrase_scan.py`). The compact runtime pack has 16 literal
-triggers, each backed by contextual false-positive protection. Gated words fire only in their
-jargon collocations. Literal legal, medical, mechanical, historical, and technical uses stay
-clean. Quoted spans, blockquotes, and code fences are masked first, so a tutorial documenting
-bad writing does not flag its own examples.
+**Phrase layer** (`scripts/banned_phrase_scan.py`). The compact English pack has 16 literal
+triggers and the Spanish pack (`scripts/patterns_es.py`) adds 63, each backed by contextual
+false-positive protection. Gated words fire only in their jargon collocations. Literal legal,
+medical, mechanical, historical, and technical uses stay clean, in either language. Quoted
+spans, blockquotes, and code fences are masked first, so a tutorial documenting bad writing does
+not flag its own examples.
 
-**Structure layer** (`scripts/structure_scan.py`). 36 structural patterns plus document-level
-metrics: `sentence_burstiness`, `paragraph_cv`, `triad_density`, `bold_colon_listicle_count`,
+**Structure layer** (`scripts/structure_scan.py`). 36 English and 18 Spanish structural
+patterns plus document-level metrics: `sentence_burstiness`, `paragraph_cv`, `triad_density`,
+`bold_colon_listicle_count`,
 `one_line_staccato_share`, `connective_paragraph_openers`, `signpost_density`,
 `opener_unique_ratio`, `top_opener_share`, `max_consecutive_opener`,
 `participial_closer_share`, `conclusion_coda`, and `summary_sandwich`. This layer catches the
@@ -114,13 +116,15 @@ end (`callback_content`, the strongest single tell), cue-opener roles rotating l
 (`role_entropy_bits`), intro content words reappearing as body-paragraph heads
 (`preview_fulfillment`), and section headings that restate the intro's outline
 (`heading_preview`). The composite `silhouette_penalty` flags at `1.0` against a committed
-human reference. On the corpus in the repo it separates cleanly, with 12 of 12 AI documents
-flagged and 0 of 8 human documents flagged. A cue-deletion attack collapses the scaffold metric,
+human reference (Spanish input is scored against a Spanish reference calibrated on its own
+authored corpus). On the corpora in the repo it separates cleanly in both languages: 12 of 12
+AI documents flagged and 0 of 8 human documents in English; 12 of 12 and 0 of 9 in Spanish. A cue-deletion attack collapses the scaffold metric,
 so silhouette gets scored jointly with the structure scanner, as a lower fence.
 
 ## The Gamut: What Gets Removed
 
-Every family below is cataloged in `references/taboo-phrases.md` and pinned by an eval row.
+Every family below is cataloged in `references/taboo-phrases.md` (Spanish in
+`references/taboo-phrases-es.md`) and pinned by an eval row.
 Severity is `hard` (always a tell) or `soft` (a default register guard your real voice can
 override). The idea throughout is contextual gating over blunt word bans, and a pattern ships
 only once a false-positive row proves the literal sense survives.
@@ -352,7 +356,7 @@ not prove that UNSLOP improves prose.
   explicit contract tables. Current coverage is 36/36 English and 18/18 Spanish structural
   patterns, 16/16 English and 63/63 Spanish literal triggers, and 20/20 protected categories,
   with zero expected failures.
-- **Behavioral layer.** `evals/shared-benchmark.json` is generated from 12 `skill` cases with
+- **Behavioral layer.** `evals/shared-benchmark.json` is generated from 16 `skill` cases with
   three ablations. It is useful for shaping and regression checks, but it is not the core
   product scoreboard.
 
@@ -403,6 +407,8 @@ python3 scripts/readability_metrics.py < input.txt
 # Co-writer suggestions
 python3 scripts/suggest.py document.md
 python3 scripts/check_suggestions.py suggestions.json                # the four contract gates
+# The scanners detect the language themselves: the same commands handle English
+# and Spanish, and decline anything else with non_english: true.
 
 # Voice
 python3 scripts/harvest_samples.py SOURCE -o candidates.json         # bootstrap from transcripts
@@ -421,7 +427,8 @@ unslop/
 ├── README.md                      # This file
 ├── references/
 │   ├── commands/                  # The routed flows: teach, cleanup, rewrite, mimic, contribute
-│   ├── taboo-phrases.md           # Authoritative pattern catalog (all families)
+│   ├── taboo-phrases.md           # Authoritative English pattern catalog (all families)
+│   ├── taboo-phrases-es.md        # Authoritative Spanish pattern catalog (same categories)
 │   ├── mimic.md                   # Teach/mimic internals: card anatomy, scoring, refine
 │   ├── harvest.md                 # Adapter internals and the contamination tripwire
 │   ├── calibrate.md               # The A/B preference game
@@ -434,7 +441,9 @@ unslop/
 │   ├── maintenance.md             # Add/list/wiki-sync procedures (eval-first)
 │   └── packs/                     # Small detector rule-packs plus manifest
 ├── presets/                       # crisp / warm / expert / story voice deltas
+│   └── es/                        # the same four voices in Spanish
 ├── scripts/                       # Scanners, voice tools, preservation, suggest, harvest
+│   └── patterns_es.py             # Spanish pattern pack (data only)
 ├── evals/
 │   ├── adversarial-evals.json     # Core plumbing, routing, and engineering rows
 │   ├── fixtures/contracts/        # Compact scanner, preservation, and maintenance examples
@@ -446,14 +455,16 @@ unslop/
 │   ├── CHECKS.md                  # Canonical check and external gate surface
 │   └── check_*.py                 # Parity, doc, pack, voice, and silhouette gates
 ├── docs/
-│   └── PRODUCT.md                 # Product doctrine (the why behind the repo)
+│   ├── PRODUCT.md                 # Product doctrine (the why behind the repo)
+│   └── DECISIONS.md               # Dated tradeoffs, including the bilingual decision
 └── assets/
     └── examples/                  # Before/after sets: article, LinkedIn, sales
 ```
 
 ## Voice Presets
 
-Read one preset from `presets/` before a rewrite.
+Read one preset from `presets/` before a rewrite, and from `presets/es/` for a
+Spanish document.
 
 | Preset | Style | Best for |
 |--------|-------|----------|

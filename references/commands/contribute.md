@@ -31,7 +31,9 @@ discipline, row-diff verification, and the non-maintainer fork path.
    literal-use FP example (and a REC example if a word is gated
    behind a collocation). Confirm the FN example is **red** before you touch the
    scanner, then update `scripts/banned_phrase_scan.py` and
-   `references/taboo-phrases.md` until it goes **green** while the FP example holds.
+   `references/taboo-phrases.md` (`references/taboo-phrases-es.md` and
+   `scripts/patterns_es.py` for a Spanish tell) until it goes **green** while the
+   FP example holds.
 
 5. **Verify:** `python3 scripts/contribute.py verify --bundle .unslop/contrib/<slug>`.
    It refuses TODO markers, checks specimen fidelity, and captures the

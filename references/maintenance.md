@@ -15,14 +15,17 @@ repository check.
    behind collocations in `STRUCTURAL_PATTERNS` instead, and add a REC recall
    example proving the jargon use still flags.
 3. Document it in `references/taboo-phrases.md` (parity is enforced by
-   `python3 evals/check_taboo_parity.py`).
+   `python3 evals/check_taboo_parity.py`). A Spanish phrase goes in
+   `scripts/patterns_es.py` `BANNED_PHRASES_ES`, gets its rows in the same
+   contract table, and is documented in `references/taboo-phrases-es.md`, which
+   the same gate checks.
 4. Run `python3 evals/check.py --full`; expect green with no new xfail.
 
 ## Add a structural pattern (`--add-structure`)
 
-Same procedure, but the entry goes in `STRUCTURAL_PATTERNS` with a regex, and
-the false-positive example must cover the nearest legitimate construction the regex
-could clip.
+Same procedure, but the entry goes in `STRUCTURAL_PATTERNS` with a regex
+(`STRUCTURAL_PATTERNS_ES` for Spanish), and the false-positive example must
+cover the nearest legitimate construction the regex could clip.
 
 ## Prefer a pair
 
