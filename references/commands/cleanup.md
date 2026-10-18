@@ -54,6 +54,8 @@ four gates or it is rejected:
   scanners with `validate_preservation` exit 0 versus the original.
 - `span-overlap`: spans must not overlap.
 
-Non-English input is declined the way the scanners decline it: `suggest.py`
-returns `non_english: true` with no suggestions. For a full rewrite instead of
+Spanish works the same way English does: rationales come back in Spanish and
+the spans are unchanged. Unsupported languages are declined the way the
+scanners decline them: `suggest.py` returns `non_english: true` with no
+suggestions. For a full rewrite instead of
 suggestions, route to `references/commands/rewrite.md`.

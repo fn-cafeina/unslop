@@ -1,12 +1,12 @@
 ---
 name: unslop
-description: Remove AI writing patterns from prose using either audit-only detection or a two-pass rewrite flow (diagnosis then reconstruction). Use this skill when editing, reviewing, or rewriting AI-generated content to make it sound human. Triggers on requests to "humanize", "de-slop", "fix AI text", "make it sound human", "remove AI patterns", or when reviewing text that contains obvious AI tells like "Here's the thing:", "Let that sink in", or "In today's fast-paced landscape". Also use when the user pastes text and says it "sounds like ChatGPT", "sounds robotic", "needs to sound more natural", or asks you to "clean up" drafted content before publishing.
+description: Remove AI writing patterns from prose in English or Spanish using either audit-only detection or a two-pass rewrite flow (diagnosis then reconstruction). Use this skill when editing, reviewing, or rewriting AI-generated content to make it sound human. Triggers on requests to "humanize", "de-slop", "fix AI text", "make it sound human", "remove AI patterns", or when reviewing text that contains obvious AI tells like "Here's the thing:", "Let that sink in", or "In today's fast-paced landscape". Also use when the user pastes text and says it "sounds like ChatGPT", "sounds robotic", "needs to sound more natural", or asks you to "clean up" drafted content before publishing.
 license: MIT
 user-invocable: true
 argument-hint: "[teach · cleanup · rewrite · mimic] [input]"
 metadata:
   author: claytonkim
-  version: "2.3.0"
+  version: "2.4.0"
 ---
 
 # Unslop
@@ -16,6 +16,23 @@ Humanize AI-generated prose. Audit first. Rewrite only when the user asks for a 
 For every audit or rewrite, read [references/core-contract.md](references/core-contract.md).
 It is the single behavior contract. Command files define routing and mechanics;
 presets supply optional voice, but neither can override the core contract.
+
+## Language
+
+Supported languages are English and Spanish. The output language is the input
+language: never translate inside a rewrite. The scanners detect the language
+themselves; a text in any other language gets the one graceful decline the
+product has (`non_english: true`, nothing changed).
+
+| Input | Catalog to read | Presets to read |
+|-------|-----------------|-----------------|
+| English | `references/taboo-phrases.md` | `presets/*.md` |
+| Spanish | `references/taboo-phrases-es.md` | `presets/es/*.md` |
+
+Scanner categories are shared across both languages, so the same category names,
+the same blocking list (hard hits plus `anti_slop_register`), and the same
+validation battery apply. A finding is a finding in either language; a scanner
+match never authorizes an edit on its own.
 
 ## Routing
 
@@ -59,7 +76,8 @@ When the user says any of these, load the named file and jump to the flow:
 | `--report` | Flag AI patterns without changing the text (cleanup) | false |
 | Input | Text to transform (argument, file path, or stdin) | required |
 
-Read one preset from `presets/` before writing.
+Read one preset from `presets/` (or `presets/es/` for a Spanish document)
+before writing.
 
 | Preset | Style | Best For |
 |--------|-------|----------|
@@ -110,12 +128,13 @@ For strict or requested analysis:
 |------|-------------|
 | `references/commands/*.md` | The routed command flows (rewrite, cleanup, teach, mimic, contribute). |
 | `references/pipeline.md` | Orchestrated tiered execution for multi-agent harnesses. |
-| `references/taboo-phrases.md` | Authoritative phrase catalog and scanner categories. |
+| `references/taboo-phrases.md` | Authoritative English phrase catalog and scanner categories. |
+| `references/taboo-phrases-es.md` | Authoritative Spanish phrase catalog (same categories). |
 | `references/fact-preservation.md` | Constraint preservation rules. |
 | `references/rewrite-examples.md` | Executable before/after examples. |
 | `references/{mimic,harvest,calibrate}.md` | Voice-tool internals loaded by their routed command. |
 | `references/{rubric,edit-library,maintenance}.md` | Strict scoring, examples, and contribution procedures. |
-| `presets/*.md` | Voice-specific deltas. |
+| `presets/*.md`, `presets/es/*.md` | Voice-specific deltas, per language. |
 
 ## Maintenance
 

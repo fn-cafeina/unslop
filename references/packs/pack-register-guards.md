@@ -28,3 +28,8 @@ Every finding is a preservation constraint. Use `hard` when changing it could in
 - "Users should never store secrets in client-side code." -> report "never store secrets".
 - "It is worth noting that the button is blue." -> no finding; ordinary filler belongs to another pack.
 - "The trial may cause drowsiness in some patients." -> report "may" and "some patients".
+
+## Look For (Spanish)
+
+The same categories, with their Spanish surface:
+- "podría quizá", "tal vez quizá" (hedge stack)

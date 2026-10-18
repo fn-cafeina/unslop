@@ -31,3 +31,13 @@ Mark `hard` when the cadence is itself a recognizable formula. Mark `soft` when 
 - "We tested the API, fixed the retry path, and shipped." -> no finding.
 - "The result: alignment. The cost: trust." -> report colon reveal / fragment cadence.
 - "Thanks for sending this over. Could you send the figures by Friday?" -> no finding; natural warmth.
+
+## Look For (Spanish)
+
+The same categories, with their Spanish surface:
+- "se erige como un referente", "constituye un hito", "funciona como un puente" (copula avoidance; legal use is protected)
+- "no solo ... sino también" (negative parallelism; contracts are protected)
+- "no se trata de X, sino de Y" (binary contrast)
+- "la verdad incómoda", "lo que realmente importa", "sin duda alguna" (emphasis crutch)
+- "Sin adornos. Sin relleno." (anti-slop fragment stack)
+- "imagínate", "piensa por un momento", "¿te suena familiar?" (reader addressing)

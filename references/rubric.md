@@ -169,3 +169,38 @@ Is the structure organic, or following AI templates?
 □ Structure: No AI templates?                   [  /5]
                                          TOTAL: [  /40]
 ```
+
+## Apéndice en español
+
+Los ocho ejes y el umbral (32/40) son los mismos. Lo que cambia es la
+superficie, y estas son las señales concretas que se buscan al puntuar prosa
+española.
+
+**Frases que delatan (buscar en el texto):** "es importante destacar que",
+"cabe destacar que", "en la era digital", "en conclusión", "en definitiva",
+"desempeña un papel crucial", "juega un papel fundamental", "un testimonio de",
+"expertos señalan", "los estudios demuestran", "un rico patrimonio cultural",
+"el secreto mejor guardado", "una experiencia inolvidable", "sumérgete en",
+"desbloquea el potencial", "aprovecha al máximo", "sinergia", "holístico",
+"empoderar", "los datos hablan por sí solos", "¿en qué puedo ayudarte hoy?".
+El catálogo completo está en `references/taboo-phrases-es.md`.
+
+**Ritmo:** el español natural alterna subordinación y frase corta. Una prosa
+con todas las frases entre 18 y 24 palabras, o con todas por debajo de 8,
+puntúa bajo en Ritmo y en Autenticidad. Los umbrales de palabras por frase del
+cuerpo principal están calibrados para inglés; en español se juzga la variación,
+no la media.
+
+**Legibilidad:** el índice aplicable en español es Szigriszt-Pazos (INFLESZ),
+que sustituye a Flesch-Kincaid; el gate de staccato y las métricas de ritmo son
+los mismos.
+
+**Preservación de hechos:** cifras con formato español (`1.500,50 euros`),
+fechas (`12 de marzo de 2024`), trimestres (`segundo trimestre`), referencias
+(`artículo 5`, `cláusula 8`), títulos (`Sr.`, `Dra.`) y `y/o` cuentan como
+hechos y deben sobrevivir literalmente.
+
+**Registro:** "no obstante" y "sin perjuicio de" son redacción jurídica, no
+señales de IA; "en conclusión" en una sentencia es estructura, no cierre
+anunciado. El escáner ya los protege por contexto, y la rúbrica no debe
+penalizarlos.

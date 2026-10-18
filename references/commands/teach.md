@@ -75,3 +75,12 @@ Prove the loop before the user trusts it: mimic one paragraph per
 `references/commands/mimic.md`, run `scripts/voice_score.py` and the scanners,
 and show the results. A voiced demo that trips a slop gate fails the loop; do not
 ship it with an excuse.
+
+## Idioma
+
+Las muestras pueden estar en español. La detección es automática: el perfil
+(`profile.json`) registra `"language": "es"`, las palabras funcionales y la
+tabla de puntuación cambian, y la carta de voz y las hojas se escriben en
+español. Pasa `--lang` a `voice_profile.py` solo para forzar el idioma cuando
+las muestras sean mixtas. Para puntuar, usa un pool de impostores del mismo
+idioma (`evals/fixtures/voice/impostors_es/`).

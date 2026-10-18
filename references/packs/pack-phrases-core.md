@@ -28,3 +28,15 @@ Use `hard` for always-bad boilerplate and `soft` for context-dependent wording. 
 - "The loan used 3:1 leverage." -> no finding; finance sense is literal.
 - "This update unlocks seamless cross-functional synergy." -> report "seamless" and "synergy".
 - "Some critics argue the policy failed." -> report vague attribution unless the critics are named nearby.
+
+## Look For (Spanish)
+
+The same categories, with their Spanish surface:
+- "es importante destacar que", "cabe destacar que", "en la era digital", "hoy más que nunca" (filler)
+- "en conclusión", "en resumen", "en definitiva", "como hemos visto" (conclusion scaffold)
+- "desempeña un papel crucial", "juega un papel fundamental", "un testimonio de", "marca un antes y un después" (significance inflation)
+- "expertos señalan", "según los expertos", "los estudios demuestran" (vague attribution; a named source suppresses it)
+- "un rico patrimonio cultural", "el secreto mejor guardado", "una joya escondida" (promotional; real patrimony suppresses it)
+- "sumérgete en", "desbloquea el potencial", "aprovecha al máximo", "en el fascinante mundo de" (AI vocabulary)
+- "¿en qué puedo ayudarte hoy?", "como modelo de lenguaje" (assistant artifacts)
+- "¿alguna vez te has preguntado" (rhetorical opener)
